@@ -1,0 +1,63 @@
+{
+  "id": "github",
+  "displayName": "GitHub",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": { "type": "api_key", "envVar": "GITHUB_TOKEN" },
+  "tools": [
+    {
+      "name": "list_repos",
+      "description": "List repositories owned by or accessible to the authenticated GitHub account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "create_issue",
+      "description": "Create an issue in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "title": { "type": "string" },
+          "body": { "type": "string" }
+        },
+        "required": ["owner", "repo", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_pull_request",
+      "description": "Open a pull request in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "title": { "type": "string" },
+          "head": { "type": "string" },
+          "base": { "type": "string" },
+          "body": { "type": "string" }
+        },
+        "required": ["owner", "repo", "title", "head", "base"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_repository",
+      "description": "Permanently delete a GitHub repository. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" }
+        },
+        "required": ["owner", "repo"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

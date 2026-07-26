@@ -1,0 +1,27 @@
+{
+  "name": "omnimcp-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OmniMCP AI — universal MCP gateway that lets an AI operate dozens of external platforms through independently installable connectors.",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "connectors/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:gateway": "npm run dev --workspace apps/mcp-gateway",
+    "dev:rest-api": "npm run dev --workspace apps/rest-api"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "@types/node": "^20.16.11"
+  }
+}

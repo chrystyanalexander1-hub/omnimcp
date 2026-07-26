@@ -1,0 +1,51 @@
+{
+  "id": "google-drive",
+  "displayName": "Google Drive",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GOOGLE_DRIVE_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_files",
+      "description": "List files in the authenticated user's Google Drive.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "upload_file",
+      "description": "Upload a file to Google Drive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "contentBase64": { "type": "string", "description": "File content, base64-encoded." }
+        },
+        "required": ["name", "mimeType", "contentBase64"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "download_file",
+      "description": "Download a file's content from Google Drive as base64.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "fileId": { "type": "string" } },
+        "required": ["fileId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}
