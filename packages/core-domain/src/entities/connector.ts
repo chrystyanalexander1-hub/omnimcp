@@ -40,6 +40,18 @@ export interface ConnectorAuth {
      * no refresh_token at all, regardless of what the token exchange requests later.
      */
     readonly authorizationExtraParams?: Readonly<Record<string, string>>;
+    /**
+     * True for providers (Mercado Libre) that invalidate the current refresh_token
+     * every time it's exchanged and issue a new one in its place — most providers
+     * (Google, Reddit, Pinterest, Snapchat) don't do this and reuse the same
+     * refresh_token indefinitely. When true, `ConnectorProcessManager` refreshes the
+     * token itself right before spawning a new pooled connection and persists the
+     * newly-issued refresh_token back to the stored `CredentialGrant` — without that,
+     * the very next process respawn (any idle gap, deploy, or crash) would reuse an
+     * already-invalidated refresh_token and fail permanently. See
+     * `packages/core-infrastructure/src/services/connector-process-manager.ts`.
+     */
+    readonly refreshTokenRotates?: boolean;
   };
   /**
    * Names of additional env vars — set once on the gateway process, shared across

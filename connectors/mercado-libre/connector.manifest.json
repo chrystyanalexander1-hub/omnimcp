@@ -1,0 +1,53 @@
+{
+  "id": "mercado-libre",
+  "displayName": "Mercado Libre",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "MERCADOLIBRE_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://auth.mercadolibre.com.ar/authorization",
+      "tokenUrl": "https://api.mercadolibre.com/oauth/token",
+      "scopes": [],
+      "clientIdEnvVar": "MERCADOLIBRE_CLIENT_ID",
+      "clientSecretEnvVar": "MERCADOLIBRE_CLIENT_SECRET",
+      "refreshTokenRotates": true
+    }
+  },
+  "tools": [
+    {
+      "name": "get_my_user",
+      "description": "Get the authenticated seller's own user info (id, nickname, site_id) — needed as input for other tools like list_orders.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_orders",
+      "description": "List orders for a seller.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sellerId": { "type": "string", "description": "From get_my_user's id field" }
+        },
+        "required": ["sellerId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_item_stock",
+      "description": "Update a listing's available stock quantity. Changes what's really for sale immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string" },
+          "quantity": { "type": "number" }
+        },
+        "required": ["itemId", "quantity"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

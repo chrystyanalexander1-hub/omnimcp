@@ -28,6 +28,7 @@ const authSchema = z.object({
       clientSecretEnvVar: z.string(),
       tokenAuthMethod: z.enum(["body", "basic"]).default("body"),
       authorizationExtraParams: z.record(z.string()).optional(),
+      refreshTokenRotates: z.boolean().default(false),
     })
     .optional(),
   sharedEnvVars: z.array(z.string()).optional(),
@@ -86,6 +87,7 @@ export async function loadConnectorManifests(connectorsDir: string): Promise<Con
               clientIdEnvVar: parsed.auth.oauth.clientIdEnvVar,
               clientSecretEnvVar: parsed.auth.oauth.clientSecretEnvVar,
               tokenAuthMethod: parsed.auth.oauth.tokenAuthMethod,
+              refreshTokenRotates: parsed.auth.oauth.refreshTokenRotates,
               ...(parsed.auth.oauth.authorizationExtraParams !== undefined
                 ? { authorizationExtraParams: parsed.auth.oauth.authorizationExtraParams }
                 : {}),

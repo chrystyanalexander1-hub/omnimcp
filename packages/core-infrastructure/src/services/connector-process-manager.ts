@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { Connector, TenantId } from "@omnimcp/core-domain";
-import type { ConnectorInvoker, ConnectorToolResult } from "@omnimcp/core-application";
+import type { ConnectorInvoker, ConnectorToolResult, CredentialGrantRepository, CryptoService } from "@omnimcp/core-application";
 
 interface PooledConnection {
   readonly client: Client;
@@ -36,6 +36,8 @@ export class ConnectorProcessManager implements ConnectorInvoker {
   private readonly sweepTimer: NodeJS.Timeout;
 
   constructor(
+    private readonly credentials?: CredentialGrantRepository,
+    private readonly crypto?: CryptoService,
     private readonly gatewayName = "omnimcp-gateway",
     private readonly gatewayVersion = "0.1.0",
   ) {
@@ -51,7 +53,7 @@ export class ConnectorProcessManager implements ConnectorInvoker {
     credentialSecret: string | null,
   ): Promise<ConnectorToolResult> {
     const key = this.poolKey(tenantId, connector.id);
-    const connection = await this.getOrCreateConnection(key, connector, credentialSecret);
+    const connection = await this.getOrCreateConnection(key, connector, credentialSecret, tenantId);
     try {
       const result = await connection.client.callTool({ name: toolName, arguments: params });
       connection.lastUsedAt = Date.now();
@@ -79,17 +81,22 @@ export class ConnectorProcessManager implements ConnectorInvoker {
     key: string,
     connector: Connector,
     credentialSecret: string | null,
+    tenantId: TenantId,
   ): Promise<PooledConnection> {
     const existing = this.pool.get(key);
     if (existing) return existing;
 
-    const created = this.spawnConnection(connector, credentialSecret);
+    const created = this.spawnConnection(connector, credentialSecret, tenantId);
     this.pool.set(key, created);
     created.catch(() => this.pool.delete(key));
     return created;
   }
 
-  private async spawnConnection(connector: Connector, credentialSecret: string | null): Promise<PooledConnection> {
+  private async spawnConnection(
+    connector: Connector,
+    credentialSecret: string | null,
+    tenantId: TenantId,
+  ): Promise<PooledConnection> {
     if (connector.transport.type !== "stdio") {
       throw new Error(
         `ConnectorProcessManager only supports the "stdio" transport in this phase (connector "${connector.id}" declares "${connector.transport.type}")`,
@@ -97,9 +104,17 @@ export class ConnectorProcessManager implements ConnectorInvoker {
     }
 
     const env = baseChildEnv();
-    if (connector.auth.envVar && credentialSecret) {
+    let secretForConnector = credentialSecret;
+    if (connector.auth.oauth?.refreshTokenRotates && credentialSecret) {
+      // Mercado Libre-style provider: the stored refresh_token is only valid once. Exchange
+      // it now, before spawning, and persist the newly-issued one so the *next* spawn (after
+      // any idle eviction, deploy, or crash) still has a token that works. See the doc comment
+      // on ConnectorAuth.oauth.refreshTokenRotates in packages/core-domain.
+      secretForConnector = await this.refreshRotatingToken(tenantId, connector, credentialSecret);
+    }
+    if (connector.auth.envVar && secretForConnector) {
       // For api_key connectors this is the tenant's PAT; for oauth2 connectors it's their refresh token.
-      env[connector.auth.envVar] = credentialSecret;
+      env[connector.auth.envVar] = secretForConnector;
     }
     if (connector.auth.oauth) {
       const clientId = process.env[connector.auth.oauth.clientIdEnvVar];
@@ -120,6 +135,60 @@ export class ConnectorProcessManager implements ConnectorInvoker {
     const client = new Client({ name: this.gatewayName, version: this.gatewayVersion }, { capabilities: {} });
     await client.connect(transport);
     return { client, transport, lastUsedAt: Date.now() };
+  }
+
+  /**
+   * Exchanges a rotating refresh_token exactly once, persists the newly-issued one to
+   * the stored CredentialGrant, and returns it for injection into the spawned
+   * process's env. Requires `credentials`/`crypto` to have been provided to the
+   * constructor — connectors that don't set `refreshTokenRotates` never reach this
+   * path, so most deployments never need them.
+   */
+  private async refreshRotatingToken(tenantId: TenantId, connector: Connector, currentRefreshToken: string): Promise<string> {
+    if (!connector.auth.oauth) {
+      throw new Error(`Connector "${connector.id}" declares refreshTokenRotates without an oauth config`);
+    }
+    if (!this.credentials || !this.crypto) {
+      throw new Error(
+        `Connector "${connector.id}" needs a rotating refresh_token refreshed, but ConnectorProcessManager was constructed without credentials/crypto`,
+      );
+    }
+
+    const clientId = process.env[connector.auth.oauth.clientIdEnvVar];
+    const clientSecret = process.env[connector.auth.oauth.clientSecretEnvVar];
+    if (!clientId || !clientSecret) {
+      throw new Error(`Connector "${connector.id}" is missing its OAuth client configuration on the server`);
+    }
+
+    const useBasicAuth = connector.auth.oauth.tokenAuthMethod === "basic";
+    const response = await fetch(connector.auth.oauth.tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...(useBasicAuth ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` } : {}),
+      },
+      body: new URLSearchParams({
+        ...(useBasicAuth ? {} : { client_id: clientId, client_secret: clientSecret }),
+        grant_type: "refresh_token",
+        refresh_token: currentRefreshToken,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to refresh rotating token for connector "${connector.id}": ${response.status} ${await response.text()}`,
+      );
+    }
+    const tokens = (await response.json()) as { refresh_token?: string };
+    const newRefreshToken = tokens.refresh_token ?? currentRefreshToken;
+
+    const grant = await this.credentials.findActive(tenantId, connector.id);
+    if (grant) {
+      const encrypted = this.crypto.encrypt(tenantId, newRefreshToken);
+      await this.credentials.updateSecret(grant.id, encrypted);
+    }
+
+    return newRefreshToken;
   }
 
   private sweepIdleConnections(): void {

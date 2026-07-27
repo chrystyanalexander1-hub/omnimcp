@@ -59,6 +59,12 @@ export interface CredentialGrantRepository {
   findActive(tenantId: TenantId, connectorId: ConnectorId): Promise<CredentialGrant | null>;
   save(grant: CredentialGrant): Promise<void>;
   revoke(id: CredentialGrantId, revokedAt: Date): Promise<void>;
+  /**
+   * Overwrites a grant's encrypted secret in place, keeping its id/tenant/connector.
+   * Exists for providers that rotate their refresh_token on every use (Mercado Libre)
+   * — see `ConnectorAuth.oauth.refreshTokenRotates` in packages/core-domain.
+   */
+  updateSecret(id: CredentialGrantId, secret: { ciphertext: string; iv: string; authTag: string }): Promise<void>;
 }
 
 export interface PermissionRepository {

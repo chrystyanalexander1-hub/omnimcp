@@ -177,9 +177,9 @@ formularios.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Conectores restantes del listado original (Pinterest, Reddit, Amazon, Mercado
-  Libre — ver el bloque "Conectores diferidos" más abajo con la razón concreta de
-  cada uno, generación de IA multimedia, etc.) — se agregan siguiendo
+- Conectores restantes del listado original (Amazon — ver el bloque "Conectores
+  diferidos" más abajo con la razón concreta, generación de IA multimedia más
+  allá de OpenAI, etc.) — se agregan siguiendo
   `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están, además de
   GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
@@ -350,6 +350,28 @@ formularios.
     tenant tiene su propia instancia (mismo criterio que `shopDomain` en
     Shopify). `trigger_webhook` sigue el patrón de URL-como-credencial de
     Zapier/Make para el nodo Webhook específico que se quiera disparar.
+  - `connectors/mercado-libre` — ya no está diferido. Necesitaba resolver antes
+    la rotación del `refresh_token` (ver la nota vieja más abajo, dejada como
+    referencia): se agregó `ConnectorAuth.oauth.refreshTokenRotates` al
+    contrato de conector (`packages/core-domain/src/entities/connector.ts`) y
+    un nuevo método `CredentialGrantRepository.updateSecret`. Cuando un
+    conector lo declara, `ConnectorProcessManager` — antes de spawnear un
+    proceso nuevo para ese (tenant, conector), es decir en cualquier respawn
+    tras un idle de 10 minutos, un deploy, o un crash — intercambia el
+    refresh_token guardado por uno nuevo y lo persiste de inmediato
+    (re-encriptado) en el `CredentialGrant`, antes de inyectárselo al proceso.
+    El propio conector (`mercadolibre-auth.ts`) queda idéntico en forma a
+    cualquier otro OAuth2 (mismo patrón que `google-calendar/google-auth.ts`) —
+    no necesita saber nada sobre la rotación, el núcleo ya se la resolvió antes
+    de que el proceso arrancara. Límite que sigue existiendo, ahora mucho más
+    angosto: si un mismo proceso pooleado sobrevive sin reiniciarse más de una
+    vida útil de access token (~6h de uso continuo sin gaps de 10+ min) y
+    *después* muere, el próximo spawn puede fallar y pedir re-autenticación —
+    cerrar ese último tramo exigiría que el token viajara fresco en cada
+    llamada individual (no solo al spawnear), algo que el protocolo MCP actual
+    (argumentos validados por el esquema zod de cada tool antes de llegar al
+    handler) no deja colar sin tocar `connector-sdk-ts` para todos los
+    conectores por igual — no se justificó para este único caso.
 - Apps nativas de Android y Windows.
 - Facturación / planes de suscripción SaaS.
 - Escalar `apps/mcp-gateway`/`apps/rest-api` a múltiples réplicas: hoy el catálogo de
@@ -371,22 +393,12 @@ formularios.
 
 ### Conectores diferidos (no implementados a propósito, con la razón concreta)
 
-- **Pinterest** y **Reddit**: ya no están acá — el flujo genérico ahora soporta
-  `tokenAuthMethod: "basic"` y `authorizationExtraParams`, ver la lista de arriba.
-- **Mercado Libre**: su OAuth2 es estándar (client_id/secret en el body, como
-  Google), pero **rota el `refresh_token` en cada uso** — cada refresh devuelve uno
-  nuevo y el anterior deja de servir. `CredentialGrant` hoy se graba una sola vez
-  en el callback de OAuth y nunca se actualiza después; sin un mecanismo para
-  persistir el refresh_token nuevo de vuelta a la credencial guardada, la
-  integración funcionaría al conectarla y dejaría de funcionar sola en cuanto
-  `ConnectorProcessManager` refrescara el token por primera vez (con el
-  `expires_in` típico de Mercado Libre, del orden de horas). Implementarlo bien
-  requiere esa pieza de infraestructura primero, no solo el conector.
+- **Pinterest**, **Reddit** y **Mercado Libre**: ya no están acá — el flujo
+  genérico ahora soporta `tokenAuthMethod: "basic"`, `authorizationExtraParams`
+  y `refreshTokenRotates`, ver la lista de arriba.
 - **Amazon (Selling Partner API)**: no es solo OAuth — cada request además tiene
   que firmarse con AWS Signature Version 4 (credenciales de un IAM Role/usuario de
   AWS, distintas de las de LWA/Login with Amazon), un esquema de auth
   cualitativamente distinto a los `api_key`/`oauth2` que soporta hoy
   `packages/core-domain/src/entities/connector.ts`. Necesita su propio tipo de
   auth en el contrato de conector antes de poder implementarse.
-- **Snapchat, WooCommerce, Gmail, Google Sheets**: ya no están en esta lista —
-  implementados arriba.

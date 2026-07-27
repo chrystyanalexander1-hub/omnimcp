@@ -116,14 +116,15 @@ export function createAppContext(env: Env): AppContext {
     workflowRuns: new PostgresWorkflowRunRepository(db),
   };
 
+  const crypto = new AesCryptoService(env.MASTER_ENCRYPTION_KEY);
   const services = {
-    crypto: new AesCryptoService(env.MASTER_ENCRYPTION_KEY),
+    crypto,
     tokens: new JwtTokenService(env.JWT_SECRET),
     passwordHasher: new BcryptPasswordHasher(),
     clock: new SystemClock(),
     ids: new CryptoIdGenerator(),
     rateLimiter: new RedisRateLimiter(redis, env.RATE_LIMIT_PER_MINUTE),
-    connectorProcessManager: new ConnectorProcessManager(),
+    connectorProcessManager: new ConnectorProcessManager(repositories.credentialGrants, crypto),
     cronScheduler: new CronParserScheduler(),
   };
 

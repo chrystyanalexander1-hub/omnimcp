@@ -146,6 +146,10 @@ export class InMemoryCredentialGrantRepository implements CredentialGrantReposit
     const existing = this.rows.get(id);
     if (existing) this.rows.set(id, { ...existing, revokedAt });
   }
+  async updateSecret(id: CredentialGrantId, secret: { ciphertext: string; iv: string; authTag: string }) {
+    const existing = this.rows.get(id);
+    if (existing) this.rows.set(id, { ...existing, ...secret });
+  }
 }
 
 export class InMemoryPermissionRepository implements PermissionRepository {

@@ -49,6 +49,10 @@ export class PostgresCredentialGrantRepository implements CredentialGrantReposit
     await this.db.update(credentialGrants).set({ revokedAt }).where(eq(credentialGrants.id, id));
   }
 
+  async updateSecret(id: CredentialGrantId, secret: { ciphertext: string; iv: string; authTag: string }): Promise<void> {
+    await this.db.update(credentialGrants).set(secret).where(eq(credentialGrants.id, id));
+  }
+
   private toEntity(row: typeof credentialGrants.$inferSelect): CredentialGrant {
     return Object.freeze({
       id: CredentialGrantId(row.id),
