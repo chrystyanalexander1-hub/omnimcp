@@ -103,12 +103,17 @@ intento de ejecución.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~57 conectores restantes del listado original (TikTok Ads, WhatsApp Business,
-  Telegram, Google Calendar/Workspace, CRMs, herramientas de analítica, Shopify,
-  Stripe, bases de datos, generación de IA multimedia, etc.) — se agregan siguiendo
-  `docs/connector-authoring-guide.md`, sin tocar el núcleo. Meta Ads
-  (`connectors/meta-ads`) ya está — token de larga duración con tools de campañas y
-  métricas, y sirve de plantilla para el resto de plataformas de ads/marketing.
+- Los ~54 conectores restantes del listado original (Google Calendar/Workspace,
+  CRMs, herramientas de analítica, Shopify, Stripe, bases de datos, generación de IA
+  multimedia, etc.) — se agregan siguiendo `docs/connector-authoring-guide.md`, sin
+  tocar el núcleo. Ya están, además de GitHub y Google Drive:
+  - `connectors/meta-ads` — token de larga duración, campañas y métricas.
+  - `connectors/tiktok-ads` — mismo patrón que Meta Ads, header `Access-Token`
+    propio de la API de TikTok Business en vez de `Authorization: Bearer`.
+  - `connectors/whatsapp-business` — Graph API de Meta (mismo host que Meta Ads,
+    distinto scope de permisos), envío de mensajes marcado `sensitive`.
+  - `connectors/telegram` — token de bot embebido en la URL en vez de header,
+    ejemplo más simple posible del patrón `api_key`.
 - Apps nativas de Android y Windows.
 - Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
   verifica conectividad con la API REST.

@@ -1,0 +1,66 @@
+{
+  "id": "whatsapp-business",
+  "displayName": "WhatsApp Business",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "WHATSAPP_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "get_business_profile",
+      "description": "Get the WhatsApp Business profile (about, description, email, websites) for a phone number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "phoneNumberId": { "type": "string" } },
+        "required": ["phoneNumberId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_message_templates",
+      "description": "List approved message templates for a WhatsApp Business Account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "wabaId": { "type": "string", "description": "WhatsApp Business Account ID" } },
+        "required": ["wabaId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_text_message",
+      "description": "Send a free-form text message to a specific recipient. Only works within the 24h customer service window unless the recipient messaged first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
+          "body": { "type": "string" }
+        },
+        "required": ["phoneNumberId", "to", "body"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "send_template_message",
+      "description": "Send a pre-approved message template to a recipient — the only way to start a conversation outside the 24h window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
+          "templateName": { "type": "string" },
+          "languageCode": { "type": "string", "description": "e.g. en_US, es_AR" },
+          "bodyParameters": { "type": "array", "items": { "type": "string" }, "default": [] }
+        },
+        "required": ["phoneNumberId", "to", "templateName", "languageCode"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

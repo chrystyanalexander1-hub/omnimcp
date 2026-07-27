@@ -1,0 +1,56 @@
+{
+  "id": "telegram",
+  "displayName": "Telegram",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "TELEGRAM_BOT_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "get_me",
+      "description": "Get basic information about the bot itself.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "get_chat",
+      "description": "Get information about a chat (user, group, or channel) by its ID or @username.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "chatId": { "type": "string" } },
+        "required": ["chatId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_updates",
+      "description": "Fetch recent messages/events sent to the bot (long-poll style, non-destructive).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "number", "default": 20 },
+          "offset": { "type": "number" }
+        },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_message",
+      "description": "Send a text message to a chat, group, or channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": { "type": "string" },
+          "text": { "type": "string" }
+        },
+        "required": ["chatId", "text"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
