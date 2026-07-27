@@ -1,0 +1,32 @@
+{
+  "id": "linkedin",
+  "displayName": "LinkedIn",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "LINKEDIN_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "get_profile",
+      "description": "Get the authenticated member's basic profile.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "create_post",
+      "description": "Publish a text post to the authenticated member's LinkedIn feed. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string" },
+          "visibility": { "type": "string", "enum": ["PUBLIC", "CONNECTIONS"], "default": "PUBLIC" }
+        },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

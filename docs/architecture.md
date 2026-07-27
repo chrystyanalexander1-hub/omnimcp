@@ -177,10 +177,10 @@ formularios.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~39 conectores restantes del listado original (Stripe, LinkedIn, X, Discord,
-  Google Workspace, generación de IA multimedia, etc.) — se agregan siguiendo
-  `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están, además de
-  GitHub y Google Drive:
+- Los ~33 conectores restantes del listado original (Google Workspace, Pinterest,
+  Reddit, Snapchat, WooCommerce, Amazon, Mercado Libre, generación de IA
+  multimedia, etc.) — se agregan siguiendo `docs/connector-authoring-guide.md`, sin
+  tocar el núcleo. Ya están, además de GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
   - `connectors/tiktok-ads` — mismo patrón que Meta Ads, header `Access-Token`
     propio de la API de TikTok Business en vez de `Authorization: Bearer`.
@@ -254,6 +254,26 @@ formularios.
   - `connectors/telegram` — se le agregó `send_video` (antes solo mandaba texto):
     acepta una URL (que Telegram baja solo) o el archivo en base64 subido
     directo, dos caminos reales que la propia API de Telegram soporta.
+  - `connectors/stripe` — a diferencia de casi todo el resto, la API de Stripe
+    recibe el body como `application/x-www-form-urlencoded`, no JSON — el cliente
+    del conector arma eso en vez de reusar el patrón `JSON.stringify` de los demás.
+    `create_refund` es `sensitive` porque mueve dinero real y es irreversible.
+  - `connectors/linkedin` — token de larga duración; `create_post` primero resuelve
+    el `urn:li:person:` del propio usuario autenticado (una llamada extra a
+    `/me`) para no exigirle ese dato a quien llama la tool.
+  - `connectors/x` — mismo criterio que Meta/TikTok: token de larga duración en vez
+    del OAuth2 genérico de la plataforma, para no arriesgar un detalle de la
+    implementación real de X que no se pueda verificar sin credenciales de prueba.
+  - `connectors/discord` — token de bot; usa el esquema `Authorization: Bot <token>`
+    en vez de `Bearer`, una particularidad de la API de Discord.
+  - `connectors/trello` — Trello no autentica con un solo token sino con un par
+    `key` + `token`, los dos como query params — se guarda como un único secreto
+    `"key:token"` y el conector lo separa, en vez de inventar un segundo campo de
+    credencial que el resto de la plataforma no maneja.
+  - `connectors/mongodb` — mismo rol que `connectors/postgres` pero para Mongo:
+    conecta a la base externa del propio tenant, y `run_command` es `sensitive`
+    siempre por la misma razón que `run_query` en Postgres — un comando puede leer
+    o escribir/borrar por igual, y no es seguro asumir cuál por su forma.
 - Apps nativas de Android y Windows.
 - Facturación / planes de suscripción SaaS.
 - Escalar `apps/mcp-gateway`/`apps/rest-api` a múltiples réplicas: hoy el catálogo de

@@ -1,0 +1,51 @@
+{
+  "id": "discord",
+  "displayName": "Discord",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "DISCORD_BOT_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_guild_channels",
+      "description": "List channels in a server (guild) the bot belongs to.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "guildId": { "type": "string" } },
+        "required": ["guildId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_channel_messages",
+      "description": "Fetch recent messages from a channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": { "type": "string" },
+          "limit": { "type": "number", "default": 20 }
+        },
+        "required": ["channelId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_message",
+      "description": "Send a text message to a channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": { "type": "string" },
+          "content": { "type": "string" }
+        },
+        "required": ["channelId", "content"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

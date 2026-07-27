@@ -23,12 +23,13 @@ apps/
                           en docs/architecture.md
   web-panel               login + dashboard (Next.js) — conectores, herramientas,
                           automatizaciones, auditoría, sin usar la terminal
-connectors/     (21 conectores reales — ver docs/architecture.md para el detalle
+connectors/     (27 conectores reales — ver docs/architecture.md para el detalle
                 completo de auth y tools de cada uno)
   github, google-drive, meta-ads, tiktok-ads, whatsapp-business, telegram,
   google-ads, hubspot, google-analytics, youtube, shopify, postgres,
   google-cloud-storage, azure-blob-storage, firebase-firestore,
-  tiktok-content, facebook-pages, instagram, slack, notion, google-calendar
+  tiktok-content, facebook-pages, instagram, slack, notion, google-calendar,
+  stripe, linkedin, x, discord, trello, mongodb
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```

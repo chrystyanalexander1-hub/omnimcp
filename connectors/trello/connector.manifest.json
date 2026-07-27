@@ -1,0 +1,44 @@
+{
+  "id": "trello",
+  "displayName": "Trello",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "TRELLO_KEY_AND_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_boards",
+      "description": "List boards the authenticated member belongs to.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_cards",
+      "description": "List cards on a board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "boardId": { "type": "string" } },
+        "required": ["boardId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_card",
+      "description": "Create a new card in a list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string" },
+          "name": { "type": "string" },
+          "desc": { "type": "string" }
+        },
+        "required": ["listId", "name"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "id": "stripe",
+  "displayName": "Stripe",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "STRIPE_SECRET_KEY"
+  },
+  "tools": [
+    {
+      "name": "list_customers",
+      "description": "List customers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "limit": { "type": "number", "default": 10 } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_customer",
+      "description": "Create a new customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["email"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_charges",
+      "description": "List recent charges.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "limit": { "type": "number", "default": 10 } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_refund",
+      "description": "Refund a charge, in full or in part. Moves real money back to the customer and cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chargeId": { "type": "string" },
+          "amount": { "type": "number", "description": "Amount in the smallest currency unit (e.g. cents). Omit to refund in full." }
+        },
+        "required": ["chargeId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

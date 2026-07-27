@@ -1,0 +1,40 @@
+{
+  "id": "x",
+  "displayName": "X (Twitter)",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "X_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "get_me",
+      "description": "Get the authenticated account's profile.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "create_tweet",
+      "description": "Publish a new post. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "text": { "type": "string" } },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "delete_tweet",
+      "description": "Delete a post. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "tweetId": { "type": "string" } },
+        "required": ["tweetId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "id": "mongodb",
+  "displayName": "MongoDB",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "MONGODB_CONNECTION_STRING"
+  },
+  "tools": [
+    {
+      "name": "list_collections",
+      "description": "List collections in a database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "database": { "type": "string" } },
+        "required": ["database"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "find_documents",
+      "description": "Find documents in a collection matching an optional filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "database": { "type": "string" },
+          "collection": { "type": "string" },
+          "filter": { "type": "object", "default": {} },
+          "limit": { "type": "number", "default": 20 }
+        },
+        "required": ["database", "collection"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "run_command",
+      "description": "Run a raw MongoDB database command against the tenant's own database. Always requires explicit confirmation — commands can write or drop data just as easily as read it, and that can't be told apart reliably from the command object alone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "database": { "type": "string" },
+          "command": { "type": "object" }
+        },
+        "required": ["database", "command"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
