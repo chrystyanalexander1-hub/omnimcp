@@ -15,7 +15,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "dev:gateway": "npm run dev --workspace apps/mcp-gateway",
     "dev:rest-api": "npm run dev --workspace apps/rest-api",
-    "dev:automation-worker": "npm run dev --workspace apps/automation-worker"
+    "dev:automation-worker": "npm run dev --workspace apps/automation-worker",
+    "start:web-panel": "npm run start --workspace apps/web-panel"
   },
   "engines": {
     "node": ">=20"

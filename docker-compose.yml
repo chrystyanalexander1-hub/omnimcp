@@ -118,6 +118,26 @@ services:
       CONNECTORS_DIR: /app/connectors
     command: sh -c "npm install && npm run build && npm run dev:gateway"
 
+  # Serves the compiled panel (`next start`, a real production build — not the
+  # `next dev` server used for local-only testing). Talks to rest-api over the
+  # public IP (NEXT_PUBLIC_* vars are inlined into the browser bundle at build
+  # time, so they must be an address the user's browser can reach, not the
+  # internal Docker service name).
+  web-panel:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - omnimcp_node_modules:/app/node_modules
+    ports:
+      - "3300:3300"
+    depends_on:
+      - rest-api
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://167.71.99.75:3000
+      NEXT_PUBLIC_DEFAULT_TENANT_ID: 63ceb6d3-701b-4295-8f54-18f33769628c
+    command: sh -c "npm install && npm run build && npm run start:web-panel"
+
 volumes:
   omnimcp_postgres_data:
   omnimcp_node_modules:

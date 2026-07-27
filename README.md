@@ -108,7 +108,11 @@ curl http://localhost:3000/workflows/<id>/runs -H "Authorization: Bearer <access
 
 ## Panel web
 
-En vez de `curl`, `apps/web-panel` da login + dashboard normal por navegador.
+En vez de `curl`, `apps/web-panel` da login + dashboard normal por navegador. Ya
+está desplegado junto al resto en el Droplet — accesible en
+`http://167.71.99.75:3300` (sin HTTPS todavía, ver `docs/security.md`).
+
+Para correrlo en desarrollo local en vez del que está en el Droplet:
 
 ```bash
 cp apps/web-panel/.env.local.example apps/web-panel/.env.local
@@ -117,10 +121,10 @@ cp apps/web-panel/.env.local.example apps/web-panel/.env.local
 npm run dev --workspace apps/web-panel   # http://localhost:3300
 ```
 
-Abrí `http://localhost:3300` en el navegador, iniciá sesión, y desde ahí instalás
-conectores, les das credenciales, ejecutás tools, y armás automatizaciones — sin
-terminal. Nota: `apps/rest-api` necesita CORS habilitado para que el navegador deje
-llamarlo desde otro origen (`@fastify/cors`, ya wireado en `src/server.ts`).
+Iniciá sesión, y desde ahí instalás conectores, les das credenciales, ejecutás
+tools, y armás automatizaciones — sin terminal. Nota: `apps/rest-api` necesita CORS
+habilitado para que el navegador deje llamarlo desde otro origen (`@fastify/cors`,
+ya wireado en `src/server.ts`).
 
 ## Tests
 
