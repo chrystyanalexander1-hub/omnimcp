@@ -24,6 +24,9 @@ connectors/
   github                  PAT, tools: list_repos, create_issue, create_pull_request,
                           delete_repository (sensitive)
   google-drive             OAuth2 + PKCE, tools: list_files, upload_file, download_file
+  meta-ads                 Token de larga duración, tools: list_ad_accounts,
+                          list_campaigns, get_campaign_insights, create_campaign
+                          (sensitive), update_campaign_status (sensitive)
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```

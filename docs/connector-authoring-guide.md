@@ -40,7 +40,14 @@ Reglas:
   contra la carpeta del conector — no hace falta escribir la ruta absoluta.
 - `auth.type`:
   - `"api_key"`: `envVar` es el nombre de variable de entorno donde el gateway
-    inyecta el secreto **del tenant que está llamando** (nunca uno compartido).
+    inyecta el secreto **del tenant que está llamando** (nunca uno compartido). Usá
+    este tipo también para plataformas cuyo OAuth no emite un `refresh_token`
+    estándar (Meta es el caso de referencia: emite tokens de larga duración o de
+    "usuario del sistema" pensados justo para uso servidor-a-servidor) — forzar esas
+    plataformas por el flujo OAuth genérico de abajo rompe o necesita un caso
+    especial; tratarlas como un token de larga vida, igual que GitHub, es más simple
+    y es literalmente la forma recomendada por esas plataformas. Ver
+    `connectors/meta-ads/connector.manifest.json`.
   - `"oauth2"`: además de `envVar` (donde llega el refresh token del tenant), se
     declara `oauth.clientIdEnvVar`/`oauth.clientSecretEnvVar` — esas SÍ son
     compartidas entre tenants (son las credenciales de la app OAuth de OmniMCP), y se

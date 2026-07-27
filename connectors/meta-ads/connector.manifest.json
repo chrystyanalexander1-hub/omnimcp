@@ -1,0 +1,77 @@
+{
+  "id": "meta-ads",
+  "displayName": "Meta Ads",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "META_ADS_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_ad_accounts",
+      "description": "List Meta Ads accounts accessible to the authenticated token.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_campaigns",
+      "description": "List campaigns in a Meta Ads account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "adAccountId": { "type": "string", "description": "e.g. act_1234567890" } },
+        "required": ["adAccountId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_campaign_insights",
+      "description": "Get performance metrics (impressions, clicks, spend, ctr) for a campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string" },
+          "datePreset": { "type": "string", "description": "e.g. today, yesterday, last_7d, last_30d" }
+        },
+        "required": ["campaignId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_campaign",
+      "description": "Create a new advertising campaign. Spends real budget once activated — irreversible in the sense that ad spend already delivered cannot be recovered.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "adAccountId": { "type": "string", "description": "e.g. act_1234567890" },
+          "name": { "type": "string" },
+          "objective": {
+            "type": "string",
+            "description": "e.g. OUTCOME_TRAFFIC, OUTCOME_ENGAGEMENT, OUTCOME_LEADS, OUTCOME_SALES"
+          },
+          "status": { "type": "string", "enum": ["ACTIVE", "PAUSED"], "default": "PAUSED" },
+          "specialAdCategories": { "type": "array", "items": { "type": "string" }, "default": [] }
+        },
+        "required": ["adAccountId", "name", "objective"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "update_campaign_status",
+      "description": "Pause or reactivate an existing campaign, immediately changing whether it spends budget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string" },
+          "status": { "type": "string", "enum": ["ACTIVE", "PAUSED"] }
+        },
+        "required": ["campaignId", "status"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

@@ -103,9 +103,12 @@ intento de ejecución.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~58 conectores restantes del listado original (Meta Ads, TikTok, Shopify,
+- Los ~57 conectores restantes del listado original (TikTok Ads, WhatsApp Business,
+  Telegram, Google Calendar/Workspace, CRMs, herramientas de analítica, Shopify,
   Stripe, bases de datos, generación de IA multimedia, etc.) — se agregan siguiendo
-  `docs/connector-authoring-guide.md`, sin tocar el núcleo.
+  `docs/connector-authoring-guide.md`, sin tocar el núcleo. Meta Ads
+  (`connectors/meta-ads`) ya está — token de larga duración con tools de campañas y
+  métricas, y sirve de plantilla para el resto de plataformas de ads/marketing.
 - Apps nativas de Android y Windows.
 - Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
   verifica conectividad con la API REST.
