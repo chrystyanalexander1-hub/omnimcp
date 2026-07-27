@@ -1,0 +1,48 @@
+{
+  "id": "slack",
+  "displayName": "Slack",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "SLACK_BOT_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_channels",
+      "description": "List channels the bot can see.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "send_message",
+      "description": "Send a text message to a channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string", "description": "Channel ID or name, e.g. C0123456789 or #general" },
+          "text": { "type": "string" }
+        },
+        "required": ["channel", "text"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "upload_file",
+      "description": "Upload a file to a channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string" },
+          "filename": { "type": "string" },
+          "contentBase64": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": ["channel", "filename", "contentBase64"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

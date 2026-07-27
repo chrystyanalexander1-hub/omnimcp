@@ -1,0 +1,48 @@
+{
+  "id": "tiktok-content",
+  "displayName": "TikTok Content Posting",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "TIKTOK_CONTENT_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "get_creator_info",
+      "description": "Get the creator's posting eligibility, privacy options, and duet/stitch/comment settings — TikTok requires querying this before every publish.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "publish_video_from_url",
+      "description": "Publish a video TikTok fetches from a public URL. Goes live publicly (or per the chosen privacy level) immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "privacyLevel": {
+            "type": "string",
+            "enum": ["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY"],
+            "default": "SELF_ONLY"
+          }
+        },
+        "required": ["videoUrl", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "get_publish_status",
+      "description": "Check the processing/publish status of a previously submitted video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "publishId": { "type": "string" } },
+        "required": ["publishId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}

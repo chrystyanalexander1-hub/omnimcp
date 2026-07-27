@@ -1,11 +1,17 @@
 import { errorResult, jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { TelegramApiError, telegramRequest } from "./telegram-client.js";
+import { TelegramApiError, sendVideo, telegramRequest } from "./telegram-client.js";
 
 const getMeSchema = z.object({});
 const getChatSchema = z.object({ chatId: z.string() });
 const getUpdatesSchema = z.object({ limit: z.number().default(20), offset: z.number().optional() });
 const sendMessageSchema = z.object({ chatId: z.string(), text: z.string() });
+const sendVideoSchema = z.object({
+  chatId: z.string(),
+  videoUrl: z.string().optional(),
+  contentBase64: z.string().optional(),
+  caption: z.string().optional(),
+});
 
 async function safe<T>(fn: () => Promise<T>) {
   try {
@@ -56,6 +62,17 @@ await startConnector({
       async handler({ chatId, text }) {
         const result = await safe(() =>
           telegramRequest<{ message_id: number }>("sendMessage", { chat_id: chatId, text }),
+        );
+        return result.ok ? jsonResult({ messageId: result.value.message_id }) : errorResult(result.message);
+      },
+    },
+    {
+      name: "send_video",
+      description: "Send a video to a chat, group, or channel.",
+      inputSchema: sendVideoSchema,
+      async handler({ chatId, videoUrl, contentBase64, caption }) {
+        const result = await safe(() =>
+          sendVideo(chatId, { ...(videoUrl ? { videoUrl } : {}), ...(contentBase64 ? { contentBase64 } : {}), ...(caption ? { caption } : {}) }),
         );
         return result.ok ? jsonResult({ messageId: result.value.message_id }) : errorResult(result.message);
       },

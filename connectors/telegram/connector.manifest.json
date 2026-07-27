@@ -51,6 +51,22 @@
         "additionalProperties": false
       },
       "sensitive": true
+    },
+    {
+      "name": "send_video",
+      "description": "Send a video to a chat, group, or channel — either fetched by Telegram from a URL, or uploaded directly as base64 content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": { "type": "string" },
+          "videoUrl": { "type": "string", "description": "A URL Telegram will fetch the video from" },
+          "contentBase64": { "type": "string", "description": "Video file content, base64-encoded (use instead of videoUrl)" },
+          "caption": { "type": "string" }
+        },
+        "required": ["chatId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
     }
   ]
 }

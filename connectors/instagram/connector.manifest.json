@@ -1,0 +1,53 @@
+{
+  "id": "instagram",
+  "displayName": "Instagram",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "INSTAGRAM_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_media",
+      "description": "List media (photos/videos) already published to an Instagram Business account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "igUserId": { "type": "string" } },
+        "required": ["igUserId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_media_container",
+      "description": "Create a draft media container from an image or video URL — a staging step. Nothing is public yet; call publish_media to actually post it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "igUserId": { "type": "string" },
+          "imageUrl": { "type": "string" },
+          "videoUrl": { "type": "string" },
+          "caption": { "type": "string" }
+        },
+        "required": ["igUserId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "publish_media",
+      "description": "Publish a previously created media container. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "igUserId": { "type": "string" },
+          "creationId": { "type": "string" }
+        },
+        "required": ["igUserId", "creationId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

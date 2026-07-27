@@ -22,11 +22,12 @@ apps/
   automation-worker        corre flujos programados (cron) — ver "Automatización"
                           en docs/architecture.md
   web-panel               placeholder Next.js (fuera de alcance esta fase)
-connectors/     (15 conectores reales — ver docs/architecture.md para el detalle
+connectors/     (21 conectores reales — ver docs/architecture.md para el detalle
                 completo de auth y tools de cada uno)
   github, google-drive, meta-ads, tiktok-ads, whatsapp-business, telegram,
   google-ads, hubspot, google-analytics, youtube, shopify, postgres,
-  google-cloud-storage, azure-blob-storage, firebase-firestore
+  google-cloud-storage, azure-blob-storage, firebase-firestore,
+  tiktok-content, facebook-pages, instagram, slack, notion, google-calendar
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```

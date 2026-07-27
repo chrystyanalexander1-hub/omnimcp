@@ -1,0 +1,67 @@
+{
+  "id": "google-calendar",
+  "displayName": "Google Calendar",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GOOGLE_CALENDAR_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/calendar"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_events",
+      "description": "List upcoming events on a calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "default": "primary" },
+          "timeMin": { "type": "string", "description": "ISO 8601, defaults to now" },
+          "timeMax": { "type": "string", "description": "ISO 8601" },
+          "maxResults": { "type": "number", "default": 20 }
+        },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_event",
+      "description": "Create a new calendar event. Does not notify attendees unless sendUpdates is set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "default": "primary" },
+          "summary": { "type": "string" },
+          "description": { "type": "string" },
+          "startDateTime": { "type": "string", "description": "ISO 8601" },
+          "endDateTime": { "type": "string", "description": "ISO 8601" },
+          "attendeeEmails": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "sendUpdates": { "type": "string", "enum": ["all", "externalOnly", "none"], "default": "none" }
+        },
+        "required": ["summary", "startDateTime", "endDateTime"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_event",
+      "description": "Delete a calendar event. Notifies attendees of the cancellation and cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "default": "primary" },
+          "eventId": { "type": "string" }
+        },
+        "required": ["eventId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

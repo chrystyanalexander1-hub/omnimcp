@@ -1,0 +1,63 @@
+{
+  "id": "notion",
+  "displayName": "Notion",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "NOTION_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "search",
+      "description": "Search pages and databases the integration has access to.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "query": { "type": "string" } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_page",
+      "description": "Get a page's properties by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "pageId": { "type": "string" } },
+        "required": ["pageId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_page",
+      "description": "Create a new page under a parent page or database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentId": { "type": "string" },
+          "parentType": { "type": "string", "enum": ["page_id", "database_id"], "default": "page_id" },
+          "title": { "type": "string" },
+          "content": { "type": "string", "description": "Plain text body, added as a single paragraph block" }
+        },
+        "required": ["parentId", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_page",
+      "description": "Update a page's title property.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": ["pageId", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "id": "facebook-pages",
+  "displayName": "Facebook Pages",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "FACEBOOK_PAGE_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_pages",
+      "description": "List Facebook Pages the authenticated token can manage.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "get_page_insights",
+      "description": "Get performance metrics for a Page (e.g. page_impressions, page_engaged_users).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string" },
+          "metric": { "type": "string", "default": "page_impressions" }
+        },
+        "required": ["pageId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_post",
+      "description": "Publish a text post to a Page's feed. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["pageId", "message"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "upload_video",
+      "description": "Upload and publish a video to a Page, fetched from a public URL. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string" },
+          "videoUrl": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "required": ["pageId", "videoUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

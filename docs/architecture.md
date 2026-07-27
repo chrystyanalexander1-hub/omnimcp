@@ -151,8 +151,8 @@ que rechazaría una llamada manual suya hoy.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~45 conectores restantes del listado original (Google Calendar/Workspace,
-  Stripe, generación de IA multimedia, etc.) — se agregan siguiendo
+- Los ~39 conectores restantes del listado original (Stripe, LinkedIn, X, Discord,
+  Google Workspace, generación de IA multimedia, etc.) — se agregan siguiendo
   `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están, además de
   GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
@@ -199,6 +199,35 @@ que rechazaría una llamada manual suya hoy.
     (`{ stringValue: "x" }`, `{ mapValue: { fields: {...} } }`, ...) — hay un
     conversor de ida y vuelta en `firestore-values.ts` para que el resto del código
     (y quien llama a la tool) solo vea JSON plano.
+  - `connectors/tiktok-content` — publicación **orgánica** en TikTok (Content
+    Posting API), distinto producto de TikTok que `tiktok-ads` (host, app y token
+    propios). Token de larga duración, no el flujo OAuth genérico: el OAuth v2 de
+    TikTok usa el parámetro `client_key` en vez de `client_id`, que es justo el
+    nombre que el flujo genérico de `apps/rest-api/src/routes/oauth.ts` da por
+    sentado — conectarlo ahí sin ajustar esa ruta habría fallado en silencio.
+  - `connectors/facebook-pages` — Graph API de Meta (mismo host que Meta Ads/
+    WhatsApp). `list_pages` funciona con un token de usuario; publicar
+    (`create_post`, `upload_video`) necesita el token propio de esa Page — el
+    conector no hace el intercambio automático, se documenta en el manifiesto.
+  - `connectors/instagram` — Graph API de Meta también. Publicar es un flujo de
+    dos pasos real (crear un contenedor de media en borrador, después publicarlo);
+    `create_media_container` no es `sensitive` porque nada queda público todavía,
+    `publish_media` sí.
+  - `connectors/slack` — token de bot de larga duración. `upload_file` usa el
+    flujo moderno de 3 pasos de Slack (reservar URL, subir los bytes, confirmar) —
+    el viejo endpoint de un solo paso está en proceso de discontinuarse.
+  - `connectors/notion` — token de integración. La propiedad "título" de una
+    página se llama `title` cuando el padre es otra página, pero varía por
+    base de datos cuando el padre es una base de datos — se asume `Name` (el
+    default más común) en vez de resolver el schema real, una simplificación
+    documentada en el propio código.
+  - `connectors/google-calendar` — mismo OAuth2+PKCE que Google Drive.
+    `create_event` no manda notificaciones a los invitados salvo que se pida
+    explícitamente (`sendUpdates`); `delete_event` sí las manda siempre (las
+    cancela) y por eso es `sensitive`.
+  - `connectors/telegram` — se le agregó `send_video` (antes solo mandaba texto):
+    acepta una URL (que Telegram baja solo) o el archivo en base64 subido
+    directo, dos caminos reales que la propia API de Telegram soporta.
 - Apps nativas de Android y Windows.
 - Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
   verifica conectividad con la API REST.
