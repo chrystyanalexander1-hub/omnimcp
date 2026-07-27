@@ -20,30 +20,11 @@ apps/
                           conectores instalados a un cliente de IA
   rest-api                API HTTP multi-usuario (Fastify) para el panel/SDK/apps
   web-panel               placeholder Next.js (fuera de alcance esta fase)
-connectors/
-  github                  PAT, tools: list_repos, create_issue, create_pull_request,
-                          delete_repository (sensitive)
-  google-drive             OAuth2 + PKCE, tools: list_files, upload_file, download_file
-  meta-ads                 Token de larga duración, tools: list_ad_accounts,
-                          list_campaigns, get_campaign_insights, create_campaign
-                          (sensitive), update_campaign_status (sensitive)
-  tiktok-ads                Token de larga duración, tools: list_campaigns,
-                          get_campaign_report, create_campaign (sensitive),
-                          update_campaign_status (sensitive)
-  whatsapp-business          Token de larga duración, tools: get_business_profile,
-                          list_message_templates, send_text_message (sensitive),
-                          send_template_message (sensitive)
-  telegram                  Token de bot, tools: get_me, get_chat, get_updates,
-                          send_message (sensitive)
-  google-ads                 OAuth2 + PKCE + developer token compartido, tools:
-                          list_accessible_customers, search_campaigns,
-                          create_campaign (sensitive), update_campaign_status
-                          (sensitive)
-  hubspot                    Token de larga duración, tools: list_contacts,
-                          create_contact, search_deals, update_deal_stage
-                          (sensitive)
-  google-analytics            OAuth2 + PKCE, tools: list_account_summaries,
-                          run_report
+connectors/     (15 conectores reales — ver docs/architecture.md para el detalle
+                completo de auth y tools de cada uno)
+  github, google-drive, meta-ads, tiktok-ads, whatsapp-business, telegram,
+  google-ads, hubspot, google-analytics, youtube, shopify, postgres,
+  google-cloud-storage, azure-blob-storage, firebase-firestore
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```

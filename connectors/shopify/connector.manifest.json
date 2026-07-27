@@ -1,0 +1,73 @@
+{
+  "id": "shopify",
+  "displayName": "Shopify",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "SHOPIFY_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_products",
+      "description": "List products in a Shopify store.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shopDomain": { "type": "string", "description": "e.g. mystore.myshopify.com" },
+          "limit": { "type": "number", "default": 20 }
+        },
+        "required": ["shopDomain"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_order",
+      "description": "Get details of a specific order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shopDomain": { "type": "string" },
+          "orderId": { "type": "string" }
+        },
+        "required": ["shopDomain", "orderId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_product",
+      "description": "Create a new product (as a draft by default).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shopDomain": { "type": "string" },
+          "title": { "type": "string" },
+          "bodyHtml": { "type": "string" },
+          "price": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "draft"], "default": "draft" }
+        },
+        "required": ["shopDomain", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "fulfill_order",
+      "description": "Mark an order as fulfilled/shipped — notifies the real customer and cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "shopDomain": { "type": "string" },
+          "orderId": { "type": "string" },
+          "trackingNumber": { "type": "string" },
+          "notifyCustomer": { "type": "boolean", "default": true }
+        },
+        "required": ["shopDomain", "orderId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

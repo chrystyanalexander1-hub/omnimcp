@@ -103,10 +103,10 @@ intento de ejecución.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~51 conectores restantes del listado original (Google Calendar/Workspace,
-  Shopify, Stripe, bases de datos, generación de IA multimedia, etc.) — se agregan
-  siguiendo `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están,
-  además de GitHub y Google Drive:
+- Los ~45 conectores restantes del listado original (Google Calendar/Workspace,
+  Stripe, generación de IA multimedia, etc.) — se agregan siguiendo
+  `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están, además de
+  GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
   - `connectors/tiktok-ads` — mismo patrón que Meta Ads, header `Access-Token`
     propio de la API de TikTok Business en vez de `Authorization: Bearer`.
@@ -126,6 +126,31 @@ intento de ejecución.
     App" tokens para este caso, igual que el PAT de GitHub).
   - `connectors/google-analytics` — mismo patrón OAuth2+PKCE, de solo lectura
     (reportes GA4); no tiene ninguna tool `sensitive` porque no escribe nada.
+  - `connectors/youtube` — OAuth2+PKCE (mismo client de Google); subir/editar video
+    marcado `sensitive` porque publica contenido público de inmediato.
+  - `connectors/shopify` — token de Admin API de "Custom App" (mismo patrón que el
+    PAT de GitHub); `shopDomain` va como parámetro de cada tool, no como config fija,
+    porque identifica qué tienda del tenant se usa en esa llamada, no un secreto.
+    `fulfill_order` es `sensitive` porque notifica a un cliente real y despacha
+    mercadería real.
+  - `connectors/postgres` — conecta a la **propia base de datos externa del
+    tenant** (no a la de OmniMCP). `run_query` es `sensitive` siempre, sin importar
+    el contenido de la consulta: distinguir de forma confiable un `SELECT` inocuo de
+    una escritura disfrazada (una función que muta datos, un CTE, etc.) por el texto
+    de la query no es seguro de automatizar, así que directamente no se intenta.
+  - `connectors/google-cloud-storage` — OAuth2+PKCE (mismo client de Google);
+    `delete_object` es `sensitive`.
+  - `connectors/azure-blob-storage` — Azure no acepta un bearer token simple desde
+    una cadena de conexión: cada request se firma con el algoritmo "Shared Key" de
+    Azure (HMAC-SHA256 sobre la cuenta), implementado desde cero en
+    `azure-signer.ts` porque no hay un cliente liviano oficial para eso. El listado
+    de blobs devuelve XML (no JSON) — se extraen los nombres con una regex acotada
+    en vez de sumar una dependencia de parseo XML completa para un solo campo.
+  - `connectors/firebase-firestore` — OAuth2+PKCE (mismo client de Google);
+    Firestore representa cada valor con un formato tipado propio
+    (`{ stringValue: "x" }`, `{ mapValue: { fields: {...} } }`, ...) — hay un
+    conversor de ida y vuelta en `firestore-values.ts` para que el resto del código
+    (y quien llama a la tool) solo vea JSON plano.
 - Apps nativas de Android y Windows.
 - Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
   verifica conectividad con la API REST.

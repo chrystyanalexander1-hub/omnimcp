@@ -1,0 +1,76 @@
+{
+  "id": "firebase-firestore",
+  "displayName": "Firebase Firestore",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "FIRESTORE_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/datastore"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_documents",
+      "description": "List documents in a Firestore collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "collectionPath": { "type": "string", "description": "e.g. users, orders/123/items" }
+        },
+        "required": ["projectId", "collectionPath"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_document",
+      "description": "Get a single document by its full path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "documentPath": { "type": "string", "description": "e.g. users/abc123" }
+        },
+        "required": ["projectId", "documentPath"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_document",
+      "description": "Create a new document in a collection with the given fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "collectionPath": { "type": "string" },
+          "fields": { "type": "object", "description": "Plain JSON object of field values" }
+        },
+        "required": ["projectId", "collectionPath", "fields"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_document",
+      "description": "Permanently delete a document. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string" },
+          "documentPath": { "type": "string" }
+        },
+        "required": ["projectId", "documentPath"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

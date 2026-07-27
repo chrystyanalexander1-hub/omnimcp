@@ -1,0 +1,61 @@
+{
+  "id": "azure-blob-storage",
+  "displayName": "Azure Blob Storage",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "AZURE_STORAGE_CONNECTION_STRING"
+  },
+  "tools": [
+    {
+      "name": "list_blobs",
+      "description": "List blobs in a container, optionally filtered by prefix.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "container": { "type": "string" }, "prefix": { "type": "string" } },
+        "required": ["container"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "upload_blob",
+      "description": "Upload a blob to a container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": { "type": "string" },
+          "blobName": { "type": "string" },
+          "contentBase64": { "type": "string" },
+          "contentType": { "type": "string", "default": "application/octet-stream" }
+        },
+        "required": ["container", "blobName", "contentBase64"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "download_blob",
+      "description": "Download a blob's content as base64.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "container": { "type": "string" }, "blobName": { "type": "string" } },
+        "required": ["container", "blobName"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_blob",
+      "description": "Permanently delete a blob from a container. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "container": { "type": "string" }, "blobName": { "type": "string" } },
+        "required": ["container", "blobName"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

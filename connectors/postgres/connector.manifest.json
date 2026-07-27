@@ -1,0 +1,40 @@
+{
+  "id": "postgres",
+  "displayName": "PostgreSQL",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "POSTGRES_CONNECTION_STRING"
+  },
+  "tools": [
+    {
+      "name": "list_tables",
+      "description": "List tables in the connected database's public schema.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "describe_table",
+      "description": "List a table's columns, types, and nullability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "tableName": { "type": "string" } },
+        "required": ["tableName"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "run_query",
+      "description": "Run a raw SQL statement against the tenant's own connected database. Always requires explicit confirmation — even for a plain SELECT — because this connects to a database the tenant owns and controls outside OmniMCP, and reliably telling a safe read apart from a disguised write (e.g. a SELECT that calls a mutating function) from the query text alone isn't safe to automate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "sql": { "type": "string" }, "params": { "type": "array", "items": {}, "default": [] } },
+        "required": ["sql"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

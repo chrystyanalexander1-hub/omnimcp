@@ -1,0 +1,75 @@
+{
+  "id": "youtube",
+  "displayName": "YouTube",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "YOUTUBE_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": [
+        "https://www.googleapis.com/auth/youtube",
+        "https://www.googleapis.com/auth/youtube.upload"
+      ],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_my_videos",
+      "description": "List videos uploaded by the authenticated channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "maxResults": { "type": "number", "default": 25 } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_video_stats",
+      "description": "Get view/like/comment counts and snippet metadata for a video.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "videoId": { "type": "string" } },
+        "required": ["videoId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_video_metadata",
+      "description": "Update a video's public title/description/category — changes what viewers see immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoId": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" }
+        },
+        "required": ["videoId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "upload_video",
+      "description": "Upload and publish a new video. Public once published.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "contentBase64": { "type": "string", "description": "Video file content, base64-encoded" },
+          "mimeType": { "type": "string", "default": "video/mp4" },
+          "privacyStatus": { "type": "string", "enum": ["public", "unlisted", "private"], "default": "private" }
+        },
+        "required": ["title", "contentBase64"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

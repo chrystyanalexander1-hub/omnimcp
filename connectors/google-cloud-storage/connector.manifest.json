@@ -1,0 +1,71 @@
+{
+  "id": "google-cloud-storage",
+  "displayName": "Google Cloud Storage",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GCS_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/devstorage.read_write"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_objects",
+      "description": "List objects in a bucket, optionally filtered by prefix.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bucket": { "type": "string" },
+          "prefix": { "type": "string" }
+        },
+        "required": ["bucket"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "upload_object",
+      "description": "Upload an object to a bucket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bucket": { "type": "string" },
+          "name": { "type": "string" },
+          "contentBase64": { "type": "string" },
+          "contentType": { "type": "string", "default": "application/octet-stream" }
+        },
+        "required": ["bucket", "name", "contentBase64"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "download_object",
+      "description": "Download an object's content as base64.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "bucket": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["bucket", "name"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_object",
+      "description": "Permanently delete an object from a bucket. Irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "bucket": { "type": "string" }, "name": { "type": "string" } },
+        "required": ["bucket", "name"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
