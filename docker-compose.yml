@@ -7,8 +7,9 @@ services:
       POSTGRES_DB: omnimcp
       POSTGRES_USER: omnimcp
       POSTGRES_PASSWORD: omnimcp
-    ports:
-      - "5432:5432"
+    # No published port: postgres is reachable from other containers on the
+    # compose network by service name, but must never be reachable from the
+    # public internet — see docs/security.md.
     volumes:
       - omnimcp_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,8 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # No published port, same reasoning as postgres above.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
