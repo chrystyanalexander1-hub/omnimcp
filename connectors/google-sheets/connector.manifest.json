@@ -1,0 +1,71 @@
+{
+  "id": "google-sheets",
+  "displayName": "Google Sheets",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GOOGLE_SHEETS_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/spreadsheets"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "get_values",
+      "description": "Read a range of cell values from a spreadsheet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "range": { "type": "string", "description": "A1 notation, e.g. 'Sheet1!A1:D20'" }
+        },
+        "required": ["spreadsheetId", "range"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "append_values",
+      "description": "Append rows after the last row with data in the range — does not overwrite anything existing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "range": { "type": "string", "description": "A1 notation, e.g. 'Sheet1!A1'" },
+          "values": {
+            "type": "array",
+            "items": { "type": "array", "items": {} },
+            "description": "Rows of cell values, e.g. [[\"a\",\"b\"],[\"c\",\"d\"]]"
+          }
+        },
+        "required": ["spreadsheetId", "range", "values"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_values",
+      "description": "Overwrite the cells in a range with new values. Cannot be undone through the API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "range": { "type": "string", "description": "A1 notation, e.g. 'Sheet1!A1:B2'" },
+          "values": {
+            "type": "array",
+            "items": { "type": "array", "items": {} },
+            "description": "Rows of cell values, e.g. [[\"a\",\"b\"],[\"c\",\"d\"]]"
+          }
+        },
+        "required": ["spreadsheetId", "range", "values"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

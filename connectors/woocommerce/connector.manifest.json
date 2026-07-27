@@ -1,0 +1,57 @@
+{
+  "id": "woocommerce",
+  "displayName": "WooCommerce",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "WOOCOMMERCE_CREDENTIALS"
+  },
+  "tools": [
+    {
+      "name": "list_products",
+      "description": "List products in a WooCommerce store.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "storeUrl": { "type": "string", "description": "Base URL of the store, e.g. https://mystore.com" },
+          "search": { "type": "string" },
+          "perPage": { "type": "number", "default": 20 }
+        },
+        "required": ["storeUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_orders",
+      "description": "List orders in a WooCommerce store.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "storeUrl": { "type": "string", "description": "Base URL of the store, e.g. https://mystore.com" },
+          "status": { "type": "string", "description": "e.g. pending, processing, completed, cancelled" },
+          "perPage": { "type": "number", "default": 20 }
+        },
+        "required": ["storeUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_order_status",
+      "description": "Change an order's status — can trigger customer notification emails and fulfillment workflows depending on store configuration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "storeUrl": { "type": "string", "description": "Base URL of the store, e.g. https://mystore.com" },
+          "orderId": { "type": "number" },
+          "status": { "type": "string", "description": "e.g. processing, completed, cancelled, refunded" }
+        },
+        "required": ["storeUrl", "orderId", "status"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

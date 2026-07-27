@@ -134,10 +134,36 @@ services:
     depends_on:
       - rest-api
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://167.71.99.75:3000
+      # Browser-facing address of rest-api. Defaults to the Droplet's IP over
+      # plain HTTP so this keeps working unchanged until you've done the
+      # domain-https.md setup — set PUBLIC_API_URL=https://api.tu-dominio.com
+      # in .env once caddy is up so ChatGPT Actions (which requires HTTPS) can
+      # reach it too.
+      NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_API_URL:-http://167.71.99.75:3000}
       NEXT_PUBLIC_DEFAULT_TENANT_ID: 63ceb6d3-701b-4295-8f54-18f33769628c
     command: sh -c "npm install && npm run build && npm run start:web-panel"
+
+  # Reverse proxy + automatic HTTPS (Let's Encrypt) for rest-api and web-panel.
+  # Needs DOMAIN_API/DOMAIN_APP/ACME_EMAIL set in .env, each domain's DNS A
+  # record pointing at this host, and ports 80/443 open — see
+  # docs/domain-https.md. Not needed for local dev.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - omnimcp_caddy_data:/data
+      - omnimcp_caddy_config:/config
+    env_file:
+      - .env
+    depends_on:
+      - rest-api
+      - web-panel
 
 volumes:
   omnimcp_postgres_data:
   omnimcp_node_modules:
+  omnimcp_caddy_data:
+  omnimcp_caddy_config:

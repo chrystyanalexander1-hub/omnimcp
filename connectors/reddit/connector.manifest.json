@@ -1,0 +1,66 @@
+{
+  "id": "reddit",
+  "displayName": "Reddit",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "REDDIT_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://www.reddit.com/api/v1/authorize",
+      "tokenUrl": "https://www.reddit.com/api/v1/access_token",
+      "scopes": ["identity", "read", "submit"],
+      "clientIdEnvVar": "REDDIT_CLIENT_ID",
+      "clientSecretEnvVar": "REDDIT_CLIENT_SECRET",
+      "tokenAuthMethod": "basic",
+      "authorizationExtraParams": { "duration": "permanent" }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_subreddit_posts",
+      "description": "List posts from a subreddit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subreddit": { "type": "string", "description": "Without the leading r/, e.g. 'programming'" },
+          "sort": { "type": "string", "enum": ["hot", "new", "top", "rising"], "default": "hot" },
+          "limit": { "type": "number", "default": 10 }
+        },
+        "required": ["subreddit"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "submit_post",
+      "description": "Submit a new post to a subreddit — a text (self) post if `text` is given, a link post if `url` is given. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subreddit": { "type": "string", "description": "Without the leading r/" },
+          "title": { "type": "string" },
+          "text": { "type": "string" },
+          "url": { "type": "string" }
+        },
+        "required": ["subreddit", "title"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "submit_comment",
+      "description": "Reply to a post or comment. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentFullname": { "type": "string", "description": "Fullname of the parent, e.g. t3_abc123 (post) or t1_abc123 (comment)" },
+          "text": { "type": "string" }
+        },
+        "required": ["parentFullname", "text"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

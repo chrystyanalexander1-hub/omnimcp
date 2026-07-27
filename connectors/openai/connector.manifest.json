@@ -1,0 +1,52 @@
+{
+  "id": "openai",
+  "displayName": "OpenAI",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "OPENAI_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "chat_completion",
+      "description": "Get a chat completion from an OpenAI model.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "model": { "type": "string", "default": "gpt-4o-mini" },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": { "type": "string", "enum": ["system", "user", "assistant"] },
+                "content": { "type": "string" }
+              },
+              "required": ["role", "content"]
+            }
+          },
+          "maxTokens": { "type": "number" }
+        },
+        "required": ["messages"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "generate_image",
+      "description": "Generate an image from a text prompt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": { "type": "string" },
+          "size": { "type": "string", "enum": ["1024x1024", "1024x1792", "1792x1024"], "default": "1024x1024" },
+          "n": { "type": "number", "default": 1 }
+        },
+        "required": ["prompt"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}

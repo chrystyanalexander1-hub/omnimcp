@@ -1,0 +1,25 @@
+{
+  "id": "make",
+  "displayName": "Make",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "MAKE_WEBHOOK_URL"
+  },
+  "tools": [
+    {
+      "name": "trigger_scenario",
+      "description": "Trigger a Make (Integromat) scenario by POSTing a JSON payload to its custom webhook trigger URL. What actually happens next is whatever the scenario itself does — this connector has no visibility into it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "payload": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["payload"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

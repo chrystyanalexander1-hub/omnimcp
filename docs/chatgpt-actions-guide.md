@@ -4,7 +4,7 @@
 
 ChatGPT no acepta un servidor `http://` para Actions — tiene que ser `https://`
 con un certificado válido. Si tu servidor todavía está en `http://<IP>:3000`,
-seguí primero la guía de dominio + HTTPS antes de este paso.
+seguí primero [`docs/domain-https.md`](domain-https.md) antes de este paso.
 
 ## 1. Conseguir una API key para el GPT
 

@@ -1,0 +1,25 @@
+{
+  "id": "zapier",
+  "displayName": "Zapier",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "ZAPIER_WEBHOOK_URL"
+  },
+  "tools": [
+    {
+      "name": "trigger_zap",
+      "description": "Trigger a Zap by POSTing a JSON payload to its \"Webhooks by Zapier\" trigger URL. What actually happens next is whatever the Zap itself does — sending emails, creating records, charging money, etc. — which this connector has no visibility into.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "payload": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["payload"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

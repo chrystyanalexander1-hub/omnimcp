@@ -19,6 +19,14 @@ const sendTemplateMessageSchema = z.object({
   bodyParameters: z.array(z.string()).default([]),
 });
 
+const sendImageMessageSchema = z.object({
+  phoneNumberId: z.string(),
+  to: z.string(),
+  link: z.string().optional(),
+  mediaId: z.string().optional(),
+  caption: z.string().optional(),
+});
+
 async function safe<T>(fn: () => Promise<T>) {
   try {
     return { ok: true as const, value: await fn() };
@@ -87,6 +95,30 @@ await startConnector({
                 ...(bodyParameters.length > 0
                   ? { components: [{ type: "body", parameters: bodyParameters.map((text: string) => ({ type: "text", text })) }] }
                   : {}),
+              },
+            },
+            "POST",
+          ),
+        );
+        return result.ok ? jsonResult({ messageId: result.value.messages[0]?.id }) : errorResult(result.message);
+      },
+    },
+    {
+      name: "send_image_message",
+      description: "Send an image to a specific recipient, from a public URL or an already-uploaded media ID.",
+      inputSchema: sendImageMessageSchema,
+      async handler({ phoneNumberId, to, link, mediaId, caption }) {
+        if (!link && !mediaId) return errorResult("Provide either link or mediaId.");
+        const result = await safe(() =>
+          graphRequest<{ messages: Array<{ id: string }> }>(
+            `${phoneNumberId}/messages`,
+            {
+              messaging_product: "whatsapp",
+              to,
+              type: "image",
+              image: {
+                ...(link ? { link } : { id: mediaId }),
+                ...(caption ? { caption } : {}),
               },
             },
             "POST",

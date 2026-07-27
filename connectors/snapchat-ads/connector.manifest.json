@@ -1,0 +1,78 @@
+{
+  "id": "snapchat-ads",
+  "displayName": "Snapchat Ads",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "SNAPCHAT_ADS_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.snapchat.com/login/oauth2/authorize",
+      "tokenUrl": "https://accounts.snapchat.com/login/oauth2/access_token",
+      "scopes": ["snapchat-marketing-api"],
+      "clientIdEnvVar": "SNAPCHAT_CLIENT_ID",
+      "clientSecretEnvVar": "SNAPCHAT_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_organizations",
+      "description": "List Snapchat Ads organizations accessible to the authenticated account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_ad_accounts",
+      "description": "List ad accounts within an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "organizationId": { "type": "string" } },
+        "required": ["organizationId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_campaigns",
+      "description": "List campaigns in an ad account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "adAccountId": { "type": "string" } },
+        "required": ["adAccountId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_campaign",
+      "description": "Create a new advertising campaign. Spends real budget once activated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "adAccountId": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["ACTIVE", "PAUSED"], "default": "PAUSED" },
+          "startTime": { "type": "string", "description": "ISO 8601, defaults to now" }
+        },
+        "required": ["adAccountId", "name"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "update_campaign_status",
+      "description": "Pause or reactivate an existing campaign, immediately changing whether it spends budget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "adAccountId": { "type": "string", "description": "The campaign's ad account — Snapchat's API requires it in the update path." },
+          "campaignId": { "type": "string" },
+          "status": { "type": "string", "enum": ["ACTIVE", "PAUSED"] }
+        },
+        "required": ["adAccountId", "campaignId", "status"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

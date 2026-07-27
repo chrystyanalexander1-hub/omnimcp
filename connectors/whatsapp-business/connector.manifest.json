@@ -61,6 +61,23 @@
         "additionalProperties": false
       },
       "sensitive": true
+    },
+    {
+      "name": "send_image_message",
+      "description": "Send an image to a specific recipient, from a public URL or a media ID already uploaded to WhatsApp. Only works within the 24h customer service window unless the recipient messaged first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
+          "link": { "type": "string", "description": "Public URL of the image. Provide this or mediaId, not both." },
+          "mediaId": { "type": "string", "description": "ID of media already uploaded via the WhatsApp Media API. Provide this or link, not both." },
+          "caption": { "type": "string" }
+        },
+        "required": ["phoneNumberId", "to"],
+        "additionalProperties": false
+      },
+      "sensitive": true
     }
   ]
 }

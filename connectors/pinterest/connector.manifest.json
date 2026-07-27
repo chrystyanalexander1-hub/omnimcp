@@ -1,0 +1,54 @@
+{
+  "id": "pinterest",
+  "displayName": "Pinterest",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "PINTEREST_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://www.pinterest.com/oauth/",
+      "tokenUrl": "https://api.pinterest.com/v5/oauth/token",
+      "scopes": ["boards:read", "pins:read", "pins:write"],
+      "clientIdEnvVar": "PINTEREST_CLIENT_ID",
+      "clientSecretEnvVar": "PINTEREST_CLIENT_SECRET",
+      "tokenAuthMethod": "basic"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_boards",
+      "description": "List boards owned by the authenticated account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_pins",
+      "description": "List pins on a board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "boardId": { "type": "string" } },
+        "required": ["boardId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_pin",
+      "description": "Create a new pin from an image URL and publish it to a board. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string" },
+          "imageUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "link": { "type": "string", "description": "Destination URL the pin points to when clicked" }
+        },
+        "required": ["boardId", "imageUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

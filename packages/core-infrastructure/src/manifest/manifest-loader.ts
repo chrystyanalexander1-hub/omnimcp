@@ -26,6 +26,8 @@ const authSchema = z.object({
       scopes: z.array(z.string()).default([]),
       clientIdEnvVar: z.string(),
       clientSecretEnvVar: z.string(),
+      tokenAuthMethod: z.enum(["body", "basic"]).default("body"),
+      authorizationExtraParams: z.record(z.string()).optional(),
     })
     .optional(),
   sharedEnvVars: z.array(z.string()).optional(),
@@ -75,7 +77,21 @@ export async function loadConnectorManifests(connectorsDir: string): Promise<Con
     const auth: ConnectorAuth = {
       type: parsed.auth.type,
       ...(parsed.auth.envVar !== undefined ? { envVar: parsed.auth.envVar } : {}),
-      ...(parsed.auth.oauth !== undefined ? { oauth: parsed.auth.oauth } : {}),
+      ...(parsed.auth.oauth !== undefined
+        ? {
+            oauth: {
+              authorizationUrl: parsed.auth.oauth.authorizationUrl,
+              tokenUrl: parsed.auth.oauth.tokenUrl,
+              scopes: parsed.auth.oauth.scopes,
+              clientIdEnvVar: parsed.auth.oauth.clientIdEnvVar,
+              clientSecretEnvVar: parsed.auth.oauth.clientSecretEnvVar,
+              tokenAuthMethod: parsed.auth.oauth.tokenAuthMethod,
+              ...(parsed.auth.oauth.authorizationExtraParams !== undefined
+                ? { authorizationExtraParams: parsed.auth.oauth.authorizationExtraParams }
+                : {}),
+            },
+          }
+        : {}),
       ...(parsed.auth.sharedEnvVars !== undefined ? { sharedEnvVars: parsed.auth.sharedEnvVars } : {}),
     };
 

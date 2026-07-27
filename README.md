@@ -23,13 +23,15 @@ apps/
                           en docs/architecture.md
   web-panel               login + dashboard (Next.js) — conectores, herramientas,
                           automatizaciones, auditoría, sin usar la terminal
-connectors/     (27 conectores reales — ver docs/architecture.md para el detalle
+connectors/     (40 conectores reales — ver docs/architecture.md para el detalle
                 completo de auth y tools de cada uno)
   github, google-drive, meta-ads, tiktok-ads, whatsapp-business, telegram,
   google-ads, hubspot, google-analytics, youtube, shopify, postgres,
   google-cloud-storage, azure-blob-storage, firebase-firestore,
   tiktok-content, facebook-pages, instagram, slack, notion, google-calendar,
-  stripe, linkedin, x, discord, trello, mongodb
+  stripe, linkedin, x, discord, trello, mongodb, woocommerce, gmail,
+  google-sheets, snapchat-ads, pinterest, reddit, mailchimp, activecampaign,
+  klaviyo, openai, zapier, make, n8n
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```
@@ -110,7 +112,9 @@ curl http://localhost:3000/workflows/<id>/runs -H "Authorization: Bearer <access
 
 En vez de `curl`, `apps/web-panel` da login + dashboard normal por navegador. Ya
 está desplegado junto al resto en el Droplet — accesible en
-`http://167.71.99.75:3300` (sin HTTPS todavía, ver `docs/security.md`).
+`http://167.71.99.75:3300` (sin HTTPS todavía; ver
+[`docs/domain-https.md`](docs/domain-https.md) para dejarlo con dominio propio
+y certificado, requisito además para conectar ChatGPT Actions).
 
 Para correrlo en desarrollo local en vez del que está en el Droplet:
 
@@ -142,3 +146,5 @@ npm run typecheck
   multi-tenant, auditoría.
 - [`docs/chatgpt-actions-guide.md`](docs/chatgpt-actions-guide.md) — conectar un
   Custom GPT de ChatGPT vía Actions (requiere HTTPS).
+- [`docs/domain-https.md`](docs/domain-https.md) — comprar un dominio, apuntar
+  el DNS al Droplet, y levantar `caddy` para HTTPS automático (Let's Encrypt).

@@ -24,6 +24,22 @@ export interface ConnectorAuth {
     readonly scopes: readonly string[];
     readonly clientIdEnvVar: string;
     readonly clientSecretEnvVar: string;
+    /**
+     * How the token endpoint expects the client credentials. Most providers (Google,
+     * Meta-style) accept `client_id`/`client_secret` as regular POST body fields —
+     * that's `"body"`, the default. Some (Reddit, Pinterest) require them instead as
+     * an HTTP Basic Auth header and reject them in the body; that's `"basic"`. See
+     * `apps/rest-api/src/routes/oauth.ts` for where this branches.
+     */
+    readonly tokenAuthMethod?: "body" | "basic";
+    /**
+     * Extra query params merged into the authorization redirect URL, beyond the
+     * standard OAuth2+PKCE ones the generic flow always sends. Exists for
+     * provider-specific requirements at the authorize step, e.g. Reddit's
+     * `duration=permanent` — without it Reddit issues only a 1-hour access token and
+     * no refresh_token at all, regardless of what the token exchange requests later.
+     */
+    readonly authorizationExtraParams?: Readonly<Record<string, string>>;
   };
   /**
    * Names of additional env vars — set once on the gateway process, shared across

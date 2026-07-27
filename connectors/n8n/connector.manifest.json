@@ -1,0 +1,39 @@
+{
+  "id": "n8n",
+  "displayName": "n8n",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "N8N_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "list_workflows",
+      "description": "List workflows on a self-hosted n8n instance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseUrl": { "type": "string", "description": "Base URL of the n8n instance, e.g. https://n8n.mydomain.com" }
+        },
+        "required": ["baseUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "trigger_webhook",
+      "description": "Trigger an n8n workflow by POSTing a JSON payload to its Webhook node URL. What actually happens next is whatever the workflow itself does — this connector has no visibility into it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhookUrl": { "type": "string", "description": "Full URL of the workflow's Webhook node trigger" },
+          "payload": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["webhookUrl", "payload"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

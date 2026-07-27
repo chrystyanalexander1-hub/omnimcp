@@ -6,6 +6,7 @@ const listPagesSchema = z.object({});
 const getPageInsightsSchema = z.object({ pageId: z.string(), metric: z.string().default("page_impressions") });
 const createPostSchema = z.object({ pageId: z.string(), message: z.string() });
 const uploadVideoSchema = z.object({ pageId: z.string(), videoUrl: z.string(), description: z.string().optional() });
+const uploadPhotoSchema = z.object({ pageId: z.string(), imageUrl: z.string(), caption: z.string().optional() });
 
 async function safe<T>(fn: () => Promise<T>) {
   try {
@@ -60,6 +61,23 @@ await startConnector({
           ),
         );
         return result.ok ? jsonResult({ videoId: result.value.id }) : errorResult(result.message);
+      },
+    },
+    {
+      name: "upload_photo",
+      description: "Upload and publish a photo to a Page's feed, fetched from a public URL.",
+      inputSchema: uploadPhotoSchema,
+      async handler({ pageId, imageUrl, caption }) {
+        const result = await safe(() =>
+          graphRequest<{ id: string; post_id?: string }>(
+            `${pageId}/photos`,
+            { url: imageUrl, ...(caption ? { caption } : {}) },
+            "POST",
+          ),
+        );
+        return result.ok
+          ? jsonResult({ photoId: result.value.id, postId: result.value.post_id })
+          : errorResult(result.message);
       },
     },
   ],

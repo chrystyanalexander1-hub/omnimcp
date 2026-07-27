@@ -1,0 +1,11 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN_API} {
+	reverse_proxy rest-api:3000
+}
+
+{$DOMAIN_APP} {
+	reverse_proxy web-panel:3300
+}

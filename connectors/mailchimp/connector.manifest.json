@@ -1,0 +1,39 @@
+{
+  "id": "mailchimp",
+  "displayName": "Mailchimp",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "MAILCHIMP_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "list_audiences",
+      "description": "List audiences (mailing lists) in the account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_campaigns",
+      "description": "List email campaigns in the account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "add_list_member",
+      "description": "Add or update a subscriber on an audience. Can trigger the audience's welcome automation for the recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string" },
+          "email": { "type": "string" },
+          "status": { "type": "string", "enum": ["subscribed", "unsubscribed", "pending", "cleaned"], "default": "subscribed" }
+        },
+        "required": ["listId", "email"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

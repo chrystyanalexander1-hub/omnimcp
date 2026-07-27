@@ -1,0 +1,57 @@
+{
+  "id": "activecampaign",
+  "displayName": "ActiveCampaign",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "ACTIVECAMPAIGN_CREDENTIALS"
+  },
+  "tools": [
+    {
+      "name": "list_contacts",
+      "description": "List contacts in the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "search": { "type": "string", "description": "Filters by email/name" } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_contact",
+      "description": "Create a new contact record. Does not enroll them in any automation by itself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["email"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_automations",
+      "description": "List marketing automations configured in the account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "add_contact_to_automation",
+      "description": "Enroll a contact into an automation — can immediately send real emails or trigger other live steps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": { "type": "string" },
+          "automationId": { "type": "string" }
+        },
+        "required": ["contactId", "automationId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

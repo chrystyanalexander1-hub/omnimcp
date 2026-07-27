@@ -72,6 +72,9 @@ export function registerOAuthRoutes(app: FastifyInstance, context: AppContext, e
       authorizationUrl.searchParams.set("state", state);
       authorizationUrl.searchParams.set("code_challenge", codeChallenge);
       authorizationUrl.searchParams.set("code_challenge_method", "S256");
+      for (const [key, value] of Object.entries(connector.auth.oauth.authorizationExtraParams ?? {})) {
+        authorizationUrl.searchParams.set(key, value);
+      }
 
       reply.send({ authorizationUrl: authorizationUrl.toString() });
     } catch (err) {
@@ -124,12 +127,25 @@ export function registerOAuthRoutes(app: FastifyInstance, context: AppContext, e
       }
 
       const redirectUri = new URL(`/connectors/${id}/oauth/callback`, env.OAUTH_REDIRECT_BASE_URL).toString();
+
+      // Most providers accept client_id/client_secret as regular body fields ("body",
+      // the default). A few (Reddit, Pinterest) require them as an HTTP Basic Auth
+      // header instead and reject them in the body — see the `tokenAuthMethod` doc
+      // comment on ConnectorAuth.oauth in packages/core-domain.
+      const useBasicAuth = connector.auth.oauth.tokenAuthMethod === "basic";
       const tokenResponse = await fetch(connector.auth.oauth.tokenUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          // Reddit rejects/rate-limits requests without a descriptive User-Agent;
+          // harmless to send to every provider.
+          "User-Agent": "OmniMCP/0.1 (+https://github.com/chrystyanalexander1-hub/omnimcp)",
+          ...(useBasicAuth
+            ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` }
+            : {}),
+        },
         body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
+          ...(useBasicAuth ? {} : { client_id: clientId, client_secret: clientSecret }),
           code,
           code_verifier: record.codeVerifier,
           grant_type: "authorization_code",

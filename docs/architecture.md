@@ -177,10 +177,11 @@ formularios.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~33 conectores restantes del listado original (Google Workspace, Pinterest,
-  Reddit, Snapchat, WooCommerce, Amazon, Mercado Libre, generación de IA
-  multimedia, etc.) — se agregan siguiendo `docs/connector-authoring-guide.md`, sin
-  tocar el núcleo. Ya están, además de GitHub y Google Drive:
+- Conectores restantes del listado original (Pinterest, Reddit, Amazon, Mercado
+  Libre — ver el bloque "Conectores diferidos" más abajo con la razón concreta de
+  cada uno, generación de IA multimedia, etc.) — se agregan siguiendo
+  `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están, además de
+  GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
   - `connectors/tiktok-ads` — mismo patrón que Meta Ads, header `Access-Token`
     propio de la API de TikTok Business en vez de `Authorization: Bearer`.
@@ -194,8 +195,10 @@ formularios.
     `packages/core-domain/src/entities/connector.ts`): nombres de variables de
     entorno que el gateway inyecta tal cual desde su propio proceso a cualquier
     conector que las declare — para config estática de plataforma que no es un
-    client id/secret de OAuth. Es la única extensión al núcleo que un conector
-    nuevo terminó necesitando hasta ahora.
+    client id/secret de OAuth. La primera extensión al núcleo que un conector
+    nuevo terminó necesitando — ver también `tokenAuthMethod` y
+    `authorizationExtraParams` más abajo (`connectors/pinterest`,
+    `connectors/reddit`), las otras dos.
   - `connectors/hubspot` — token de larga duración (HubSpot recomienda "Private
     App" tokens para este caso, igual que el PAT de GitHub).
   - `connectors/google-analytics` — mismo patrón OAuth2+PKCE, de solo lectura
@@ -274,6 +277,79 @@ formularios.
     conecta a la base externa del propio tenant, y `run_command` es `sensitive`
     siempre por la misma razón que `run_query` en Postgres — un comando puede leer
     o escribir/borrar por igual, y no es seguro asumir cuál por su forma.
+  - `connectors/woocommerce` — WooCommerce recomienda HTTP Basic Auth sobre HTTPS
+    (consumer key como usuario, consumer secret como contraseña) en vez de firmar
+    cada query string; se guarda como un único secreto `"consumerKey:consumerSecret"`,
+    mismo patrón que `"key:token"` en Trello. `storeUrl` va como parámetro de cada
+    tool, no como config fija, igual que `shopDomain` en Shopify.
+    `update_order_status` es `sensitive` porque puede disparar emails al cliente y
+    workflows de fulfillment reales según la config de la tienda.
+  - `connectors/gmail` — mismo OAuth2+PKCE que Google Drive/Calendar (reusa
+    `GOOGLE_CLIENT_ID`/`SECRET`). `get_message` arma el cuerpo en texto plano
+    recorriendo `payload.parts` y decodificando base64url — Gmail no expone un
+    campo "texto plano" directo. `send_message` arma el mensaje RFC 2822 a mano
+    (`To`/`Subject`/`Content-Type` + cuerpo) y lo manda en `raw` (base64url); es
+    `sensitive` porque entrega el mail de inmediato, sin forma de deshacerlo.
+  - `connectors/google-sheets` — mismo OAuth2+PKCE. `append_values` no es
+    `sensitive` porque solo agrega filas después de los datos existentes, nunca
+    pisa nada; `update_values` sí lo es porque sobreescribe el rango indicado sin
+    posibilidad de deshacer vía API.
+  - `connectors/snapchat-ads` — mismo criterio que Meta/TikTok Ads pero con OAuth2
+    real (Snapchat sí emite un `refresh_token` reutilizable, no rotativo, a
+    diferencia de Mercado Libre — ver más abajo). La API de Snapchat requiere
+    resolver organización → cuenta publicitaria → campaña en ese orden (no hay un
+    endpoint "todas mis cuentas" directo), y `update_campaign_status` necesita el
+    `adAccountId` en la ruta además del `campaignId`, a diferencia de Meta Ads.
+  - `connectors/pinterest` — primer conector que necesitó `tokenAuthMethod:
+    "basic"`: Pinterest exige el `client_id`/`client_secret` como header HTTP
+    Basic Auth tanto en el intercambio inicial (`apps/rest-api/src/routes/oauth.ts`)
+    como en cada refresh posterior (`src/pinterest-auth.ts`, que lo reimplementa
+    porque el refresh de cada llamada corre en el proceso del propio conector, no
+    en el núcleo). Sin ese modo, el body-based genérico habría fallado con 401.
+  - `connectors/reddit` — mismo `tokenAuthMethod: "basic"` que Pinterest, más un
+    segundo caso de uso para `authorizationExtraParams`:
+    `{"duration": "permanent"}` en la URL de autorización, porque sin ese
+    parámetro Reddit entrega un access token de 1 hora y **ningún** refresh token,
+    sin importar qué se pida después en el intercambio de token. También exige un
+    header `User-Agent` descriptivo en todas sus llamadas (`REDDIT_USER_AGENT` en
+    `reddit-auth.ts`) — sin él, Reddit limita o bloquea las requests. Sus
+    endpoints de escritura (`submit_post`, `submit_comment`) además reciben
+    `application/x-www-form-urlencoded`, no JSON, y devuelven un envoltorio
+    `{"json":{"errors":[...],"data":{...}}}` que hay que revisar aparte del
+    status HTTP — Reddit puede responder 200 con errores adentro.
+  - `connectors/mailchimp` — el propio API key trae el datacenter como sufijo
+    (`...-us6`): no hay host fijo, se parsea del key. `add_list_member` usa el PUT
+    de upsert por `subscriber_hash` (MD5 del email en minúsculas), el patrón que
+    Mailchimp documenta para "agregar o actualizar" en una sola llamada.
+  - `connectors/activecampaign` — necesita dos valores, no uno: URL de API propia
+    de la cuenta (`https://cuenta.api-us1.com`) + API key. Se guarda como
+    `"apiUrl|apiKey"` con pipe en vez de los dos puntos de Trello, porque la URL
+    ya tiene dos puntos (`https://`). `add_contact_to_automation` es `sensitive`
+    porque inscribe un contacto real en una automatización real, que puede
+    mandar emails de inmediato.
+  - `connectors/klaviyo` — API JSON:API real (`{"data":{"type":...,"attributes":
+    {...}}}` anidado), y exige un header `revision` con una fecha de versión de
+    API fija (`KLAVIYO_REVISION` en `klaviyo-client.ts`) — Klaviyo va
+    deprecando revisiones viejas, así que ese valor puede necesitar actualizarse
+    con el tiempo. `track_event` es `sensitive` porque un evento puede disparar
+    flows reales (emails/SMS automáticos) configurados para reaccionar a él.
+  - `connectors/openai` — API key por tenant (no compartida): cada tenant paga su
+    propio uso. `chat_completion`/`generate_image` no son `sensitive` — cuestan
+    dinero real pero no publican ni destruyen nada, mismo criterio que ya se usa
+    para llamadas pagas de solo lectura como `get_campaign_insights` en Meta Ads.
+  - `connectors/zapier` y `connectors/make` — ninguna de las dos plataformas
+    ofrece una API pública para "correr cualquiera de mis Zaps/escenarios" desde
+    un tercero; la única vía soportada en ese sentido es una URL de webhook
+    propia por Zap/escenario. La credencial acá **es la URL**, no un token —
+    mismo patrón que el token de Telegram embebido en la URL. `trigger_zap`/
+    `trigger_scenario` son `sensitive` porque este conector no tiene ninguna
+    visibilidad de qué hace realmente el Zap/escenario del otro lado.
+  - `connectors/n8n` — a diferencia de Zapier/Make, n8n autohospedado sí expone
+    una API REST real (`X-N8N-API-KEY`) que permite listar workflows, no solo
+    dispararlos a ciegas; `baseUrl` va como parámetro de cada tool porque cada
+    tenant tiene su propia instancia (mismo criterio que `shopDomain` en
+    Shopify). `trigger_webhook` sigue el patrón de URL-como-credencial de
+    Zapier/Make para el nodo Webhook específico que se quiera disparar.
 - Apps nativas de Android y Windows.
 - Facturación / planes de suscripción SaaS.
 - Escalar `apps/mcp-gateway`/`apps/rest-api` a múltiples réplicas: hoy el catálogo de
@@ -284,3 +360,33 @@ formularios.
   `infra/migrations/0001_init.sql` estén realmente activas (ver la nota al inicio de
   ese archivo) — hoy la protección real es el filtrado explícito por `tenant_id` en
   cada repositorio, que sí está completo.
+- HTTPS en el Droplet: el servicio `caddy` (`docker-compose.yml`) y la guía
+  (`docs/domain-https.md`) ya existen en el repo — falta que alguien compre un
+  dominio, apunte el DNS, y lo levante en el Droplet. Hasta entonces, el panel y
+  `rest-api` siguen sirviendo por HTTP directo a la IP, y ChatGPT Actions (que
+  exige HTTPS) no puede conectarse todavía.
+- `connectors/facebook-pages` y `connectors/whatsapp-business` ahora pueden mandar
+  imágenes (`upload_photo`, `send_image_message`); publicar/enviar audio o
+  documentos sigue sin implementarse en ninguno de los dos.
+
+### Conectores diferidos (no implementados a propósito, con la razón concreta)
+
+- **Pinterest** y **Reddit**: ya no están acá — el flujo genérico ahora soporta
+  `tokenAuthMethod: "basic"` y `authorizationExtraParams`, ver la lista de arriba.
+- **Mercado Libre**: su OAuth2 es estándar (client_id/secret en el body, como
+  Google), pero **rota el `refresh_token` en cada uso** — cada refresh devuelve uno
+  nuevo y el anterior deja de servir. `CredentialGrant` hoy se graba una sola vez
+  en el callback de OAuth y nunca se actualiza después; sin un mecanismo para
+  persistir el refresh_token nuevo de vuelta a la credencial guardada, la
+  integración funcionaría al conectarla y dejaría de funcionar sola en cuanto
+  `ConnectorProcessManager` refrescara el token por primera vez (con el
+  `expires_in` típico de Mercado Libre, del orden de horas). Implementarlo bien
+  requiere esa pieza de infraestructura primero, no solo el conector.
+- **Amazon (Selling Partner API)**: no es solo OAuth — cada request además tiene
+  que firmarse con AWS Signature Version 4 (credenciales de un IAM Role/usuario de
+  AWS, distintas de las de LWA/Login with Amazon), un esquema de auth
+  cualitativamente distinto a los `api_key`/`oauth2` que soporta hoy
+  `packages/core-domain/src/entities/connector.ts`. Necesita su propio tipo de
+  auth en el contrato de conector antes de poder implementarse.
+- **Snapchat, WooCommerce, Gmail, Google Sheets**: ya no están en esta lista —
+  implementados arriba.

@@ -56,6 +56,21 @@
         "additionalProperties": false
       },
       "sensitive": true
+    },
+    {
+      "name": "upload_photo",
+      "description": "Upload and publish a photo to a Page's feed, fetched from a public URL. Goes live publicly immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string" },
+          "imageUrl": { "type": "string" },
+          "caption": { "type": "string" }
+        },
+        "required": ["pageId", "imageUrl"],
+        "additionalProperties": false
+      },
+      "sensitive": true
     }
   ]
 }

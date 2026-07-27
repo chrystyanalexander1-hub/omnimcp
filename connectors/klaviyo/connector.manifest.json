@@ -1,0 +1,48 @@
+{
+  "id": "klaviyo",
+  "displayName": "Klaviyo",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "KLAVIYO_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "list_lists",
+      "description": "List subscriber lists in the account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "create_profile",
+      "description": "Create or update a customer profile. Does not subscribe them to anything by itself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["email"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "track_event",
+      "description": "Record a custom event for a profile — can trigger real Klaviyo flows (automated emails/SMS) configured to react to that event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profileEmail": { "type": "string" },
+          "metricName": { "type": "string", "description": "e.g. 'Placed Order', 'Viewed Product'" },
+          "properties": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["profileEmail", "metricName"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
