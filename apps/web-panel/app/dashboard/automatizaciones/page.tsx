@@ -5,23 +5,22 @@ import {
   ApiError,
   createWorkflow,
   deleteWorkflow,
+  listTools,
   listWorkflowRuns,
   listWorkflows,
   runWorkflowNow,
   toggleWorkflow,
+  type CreateWorkflowStepInput,
+  type ToolSummary,
   type WorkflowDto,
   type WorkflowRunDto,
 } from "../../../lib/api";
 import { getSession } from "../../../lib/session";
-
-const STEPS_PLACEHOLDER = JSON.stringify(
-  [{ qualifiedToolName: "github.list_repos", params: {} }],
-  null,
-  2,
-);
+import ParamsForm, { defaultParamsFrom } from "../../../components/ParamsForm";
 
 export default function AutomatizacionesPage() {
   const [workflows, setWorkflows] = useState<WorkflowDto[] | null>(null);
+  const [tools, setTools] = useState<ToolSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [statusById, setStatusById] = useState<Record<string, string>>({});
@@ -30,9 +29,16 @@ export default function AutomatizacionesPage() {
 
   const [name, setName] = useState("");
   const [cronExpression, setCronExpression] = useState("");
-  const [stepsText, setStepsText] = useState(STEPS_PLACEHOLDER);
+  const [steps, setSteps] = useState<CreateWorkflowStepInput[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [advancedText, setAdvancedText] = useState("[]");
+
+  const [stepTool, setStepTool] = useState("");
+  const [stepParams, setStepParams] = useState<Record<string, unknown>>({});
+  const [stepConfirmSensitive, setStepConfirmSensitive] = useState(false);
 
   const token = getSession()?.accessToken ?? "";
 
@@ -46,24 +52,97 @@ export default function AutomatizacionesPage() {
 
   useEffect(() => {
     refresh();
+    listTools(token)
+      .then((list) => {
+        setTools(list);
+        if (list.length > 0) {
+          setStepTool(list[0]!.name);
+          setStepParams(defaultParamsFrom(list[0]!.inputSchema));
+        }
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : "No se pudieron cargar las herramientas."));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate() {
-    setCreateError(null);
-    let steps;
-    try {
-      steps = JSON.parse(stepsText);
-    } catch {
-      setCreateError("Los pasos no son un JSON válido.");
+  const selectedStepTool = tools?.find((t) => t.name === stepTool);
+
+  function handleSelectStepTool(toolName: string) {
+    setStepTool(toolName);
+    const tool = tools?.find((t) => t.name === toolName);
+    setStepParams(defaultParamsFrom(tool?.inputSchema));
+    setStepConfirmSensitive(false);
+  }
+
+  function handleAddStep() {
+    setSteps((prev) => [
+      ...prev,
+      {
+        qualifiedToolName: stepTool,
+        params: stepParams,
+        ...(selectedStepTool?.sensitive && stepConfirmSensitive ? { confirmSensitive: true } : {}),
+      },
+    ]);
+    const tool = tools?.find((t) => t.name === stepTool);
+    setStepParams(defaultParamsFrom(tool?.inputSchema));
+    setStepConfirmSensitive(false);
+  }
+
+  function handleRemoveStep(index: number) {
+    setSteps((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleMoveStep(index: number, direction: -1 | 1) {
+    setSteps((prev) => {
+      const next = [...prev];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  }
+
+  function toggleAdvanced() {
+    if (!advancedMode) {
+      setAdvancedText(JSON.stringify(steps, null, 2));
+      setAdvancedMode(true);
       return;
     }
+    try {
+      const parsed = JSON.parse(advancedText);
+      setSteps(Array.isArray(parsed) ? parsed : []);
+      setAdvancedMode(false);
+    } catch {
+      setCreateError("Los pasos no son un JSON válido — corregilo antes de volver al formulario.");
+    }
+  }
+
+  async function handleCreate() {
+    setCreateError(null);
+
+    let finalSteps: CreateWorkflowStepInput[];
+    if (advancedMode) {
+      try {
+        finalSteps = JSON.parse(advancedText);
+      } catch {
+        setCreateError("Los pasos no son un JSON válido.");
+        return;
+      }
+    } else {
+      finalSteps = steps;
+    }
+
+    if (finalSteps.length === 0) {
+      setCreateError("Agregá al menos un paso.");
+      return;
+    }
+
     setCreating(true);
     try {
-      await createWorkflow(token, name, cronExpression.trim() || undefined, steps);
+      await createWorkflow(token, name, cronExpression.trim() || undefined, finalSteps);
       setName("");
       setCronExpression("");
-      setStepsText(STEPS_PLACEHOLDER);
+      setSteps([]);
+      setAdvancedText("[]");
       await refresh();
     } catch (err) {
       setCreateError(err instanceof ApiError ? err.message : "Error al crear la automatización.");
@@ -151,13 +230,105 @@ export default function AutomatizacionesPage() {
             onChange={(e) => setCronExpression(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="steps">Pasos (JSON)</label>
-          <textarea id="steps" value={stepsText} onChange={(e) => setStepsText(e.target.value)} />
-          <span className="hint">
-            Si un paso usa una tool sensible, agregale &quot;confirmSensitive&quot;: true.
-          </span>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
+          <button className="secondary" onClick={toggleAdvanced} type="button">
+            {advancedMode ? "Volver al formulario" : "Modo avanzado (JSON)"}
+          </button>
         </div>
+
+        {advancedMode ? (
+          <div className="field">
+            <label htmlFor="steps">Pasos (JSON)</label>
+            <textarea id="steps" value={advancedText} onChange={(e) => setAdvancedText(e.target.value)} />
+            <span className="hint">
+              Si un paso usa una tool sensible, agregale &quot;confirmSensitive&quot;: true.
+            </span>
+          </div>
+        ) : (
+          <>
+            {steps.length > 0 && (
+              <div style={{ marginBottom: "1rem" }}>
+                {steps.map((s, i) => (
+                  <div
+                    key={i}
+                    className="card"
+                    style={{ padding: "0.75rem 1rem", marginBottom: "0.5rem", background: "#f9fafb" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <strong>
+                        {i + 1}. {s.qualifiedToolName} {s.confirmSensitive ? "⚠️" : ""}
+                      </strong>
+                      <div style={{ display: "flex", gap: "0.4rem" }}>
+                        <button className="secondary" type="button" onClick={() => handleMoveStep(i, -1)} disabled={i === 0}>
+                          ↑
+                        </button>
+                        <button
+                          className="secondary"
+                          type="button"
+                          onClick={() => handleMoveStep(i, 1)}
+                          disabled={i === steps.length - 1}
+                        >
+                          ↓
+                        </button>
+                        <button className="danger" type="button" onClick={() => handleRemoveStep(i)}>
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                    {Object.keys(s.params).length > 0 && (
+                      <span className="hint">{JSON.stringify(s.params)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tools && tools.length > 0 ? (
+              <div style={{ border: "1px dashed #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
+                <div className="field">
+                  <label htmlFor="stepTool">Agregar paso — Tool</label>
+                  <select id="stepTool" value={stepTool} onChange={(e) => handleSelectStepTool(e.target.value)}>
+                    {tools.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.name} {t.sensitive ? "⚠️" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedStepTool && <span className="hint">{selectedStepTool.description}</span>}
+                </div>
+
+                <ParamsForm schema={selectedStepTool?.inputSchema} value={stepParams} onChange={setStepParams} />
+
+                {selectedStepTool?.sensitive && (
+                  <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+                    <input
+                      type="checkbox"
+                      id="stepConfirm"
+                      checked={stepConfirmSensitive}
+                      onChange={(e) => setStepConfirmSensitive(e.target.checked)}
+                    />
+                    <label htmlFor="stepConfirm" style={{ margin: 0 }}>
+                      Confirmo esta acción sensible para cada corrida futura de esta automatización.
+                    </label>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={handleAddStep}
+                  disabled={!stepTool || (selectedStepTool?.sensitive && !stepConfirmSensitive)}
+                >
+                  Agregar este paso
+                </button>
+              </div>
+            ) : (
+              <p className="hint">No hay tools disponibles — instalá un conector primero.</p>
+            )}
+          </>
+        )}
+
         <button onClick={handleCreate} disabled={creating || !name.trim()}>
           {creating ? "Creando…" : "Crear"}
         </button>

@@ -80,6 +80,7 @@ export interface ToolSummary {
   readonly name: string;
   readonly sensitive: boolean;
   readonly description: string;
+  readonly inputSchema: Record<string, unknown>;
 }
 
 export async function listTools(token: string): Promise<ToolSummary[]> {

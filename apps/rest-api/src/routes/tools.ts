@@ -14,7 +14,14 @@ export function registerToolRoutes(app: FastifyInstance, context: AppContext): v
   app.get("/tools", { preHandler: requireAuth(context) }, async (request, reply) => {
     const identity = request.identity!;
     const tools = await context.useCases.listAvailableTools.execute(identity);
-    reply.send(tools.map((t) => ({ name: t.qualifiedName, sensitive: t.tool.sensitive, description: t.tool.description })));
+    reply.send(
+      tools.map((t) => ({
+        name: t.qualifiedName,
+        sensitive: t.tool.sensitive,
+        description: t.tool.description,
+        inputSchema: t.tool.inputSchema,
+      })),
+    );
   });
 
   app.post("/tools/execute", { preHandler: requireAuth(context) }, async (request, reply) => {
