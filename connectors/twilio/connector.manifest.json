@@ -1,0 +1,52 @@
+{
+  "id": "twilio",
+  "displayName": "Twilio",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "TWILIO_CREDENTIALS"
+  },
+  "tools": [
+    {
+      "name": "list_messages",
+      "description": "List recent SMS/WhatsApp messages sent or received on the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "limit": { "type": "number", "default": 20 } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_sms",
+      "description": "Send an SMS text message. Delivers immediately and costs real money.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "E.164 format, e.g. +5491122334455" },
+          "from": { "type": "string", "description": "One of the account's Twilio phone numbers, E.164 format" },
+          "body": { "type": "string" }
+        },
+        "required": ["to", "from", "body"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "send_whatsapp_message",
+      "description": "Send a WhatsApp message via Twilio's WhatsApp API. Delivers immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "E.164 format, without the 'whatsapp:' prefix" },
+          "from": { "type": "string", "description": "The account's approved Twilio WhatsApp sender number, E.164 format" },
+          "body": { "type": "string" }
+        },
+        "required": ["to", "from", "body"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

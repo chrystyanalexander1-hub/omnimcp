@@ -1,0 +1,75 @@
+{
+  "id": "docusign",
+  "displayName": "DocuSign",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "DOCUSIGN_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://account.docusign.com/oauth/auth",
+      "tokenUrl": "https://account.docusign.com/oauth/token",
+      "scopes": ["signature"],
+      "clientIdEnvVar": "DOCUSIGN_CLIENT_ID",
+      "clientSecretEnvVar": "DOCUSIGN_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "get_user_info",
+      "description": "Get the authenticated user's DocuSign accounts, including each account's id and API base URI — needed as input for every other tool, since both vary per account.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_envelopes",
+      "description": "List envelopes (documents sent for signature) created since a date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseUri": { "type": "string", "description": "From get_user_info" },
+          "accountId": { "type": "string", "description": "From get_user_info" },
+          "fromDate": { "type": "string", "description": "ISO 8601 date, defaults to 30 days ago" }
+        },
+        "required": ["baseUri", "accountId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "get_envelope_status",
+      "description": "Get the current status (sent, delivered, completed, declined, voided) of an envelope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseUri": { "type": "string" },
+          "accountId": { "type": "string" },
+          "envelopeId": { "type": "string" }
+        },
+        "required": ["baseUri", "accountId", "envelopeId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_envelope",
+      "description": "Send a document to a signer for electronic signature. Delivers immediately as a real, legally binding signature request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseUri": { "type": "string" },
+          "accountId": { "type": "string" },
+          "emailSubject": { "type": "string" },
+          "documentBase64": { "type": "string", "description": "Base64-encoded document contents" },
+          "documentName": { "type": "string" },
+          "fileExtension": { "type": "string", "default": "pdf" },
+          "signerEmail": { "type": "string" },
+          "signerName": { "type": "string" }
+        },
+        "required": ["baseUri", "accountId", "emailSubject", "documentBase64", "documentName", "signerEmail", "signerName"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

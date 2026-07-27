@@ -372,6 +372,35 @@ formularios.
     (argumentos validados por el esquema zod de cada tool antes de llegar al
     handler) no deja colar sin tocar `connector-sdk-ts` para todos los
     conectores por igual — no se justificó para este único caso.
+  - `connectors/twilio` — autentica con HTTP Basic (Account SID + Auth Token),
+    guardado como `"accountSid|authToken"` igual que ActiveCampaign.
+    `send_whatsapp_message` reusa el mismo endpoint `/Messages.json` que
+    `send_sms`, solo agregando el prefijo `whatsapp:` a `to`/`from` — es el
+    mismo producto de mensajería vista distinta, no una API separada. Ambos
+    envíos son `sensitive` porque entregan de inmediato y cuestan dinero real.
+  - `connectors/calendly` — la API pública de Calendly es de solo lectura +
+    cancelación; no existe un endpoint para crear una reunión en nombre de
+    otro usuario (eso es lo que resuelve la página de reserva/el widget, no la
+    API). `cancel_scheduled_event` acepta la URI completa o el UUID pelado del
+    evento y extrae el UUID igual — es lo único que pide el endpoint de
+    cancelación.
+  - `connectors/docusign` — igual que Mailchimp con el datacenter, la URI base
+    de la API y el `accountId` varían por cuenta, pero acá no se pueden sacar
+    del token: hace falta una llamada a `/oauth/userinfo` primero
+    (`get_user_info`), y el resto de las tools reciben `baseUri`/`accountId`
+    como parámetro. `send_envelope` ubica el tab de firma en una posición fija
+    (página 1) en vez de buscar un `anchorString` en el documento — una tool
+    genérica para "mandar cualquier PDF" no tiene forma de conocer el layout
+    real de antemano; el firmante igual puede arrastrar el tab en la propia UI
+    de DocuSign antes de completar. `send_envelope` es `sensitive` porque manda
+    un pedido de firma real y legalmente vinculante de inmediato.
+  - `connectors/airtable` — `baseId`/`tableName` van como parámetro de cada
+    tool (un tenant puede tener más de una base), mismo criterio que
+    `shopDomain` en Shopify. `update_record` no es `sensitive` porque solo
+    pisa los campos que se pasan explícitamente, nunca el registro entero
+    (a diferencia de `update_values` en Google Sheets, que sí sobreescribe un
+    rango completo); `delete_record` sí lo es, borra el registro sin
+    posibilidad de deshacer vía API.
 - Apps nativas de Android y Windows.
 - Facturación / planes de suscripción SaaS.
 - Escalar `apps/mcp-gateway`/`apps/rest-api` a múltiples réplicas: hoy el catálogo de

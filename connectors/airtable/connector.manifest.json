@@ -1,0 +1,74 @@
+{
+  "id": "airtable",
+  "displayName": "Airtable",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "AIRTABLE_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "list_records",
+      "description": "List records in a table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string" },
+          "tableName": { "type": "string" },
+          "maxRecords": { "type": "number", "default": 20 },
+          "filterByFormula": { "type": "string", "description": "Airtable formula, e.g. \"{Status}='Active'\"" }
+        },
+        "required": ["baseId", "tableName"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_record",
+      "description": "Create a new record in a table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string" },
+          "tableName": { "type": "string" },
+          "fields": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["baseId", "tableName", "fields"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_record",
+      "description": "Update specific fields of an existing record, leaving other fields untouched.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string" },
+          "tableName": { "type": "string" },
+          "recordId": { "type": "string" },
+          "fields": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["baseId", "tableName", "recordId", "fields"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "delete_record",
+      "description": "Delete a record. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string" },
+          "tableName": { "type": "string" },
+          "recordId": { "type": "string" }
+        },
+        "required": ["baseId", "tableName", "recordId"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "id": "calendly",
+  "displayName": "Calendly",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "CALENDLY_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "get_my_user",
+      "description": "Get the authenticated user's own info and URI — needed as input for the other tools.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "list_event_types",
+      "description": "List bookable event types (meeting templates) for a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "userUri": { "type": "string", "description": "From get_my_user's uri field" } },
+        "required": ["userUri"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "list_scheduled_events",
+      "description": "List scheduled meetings for a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userUri": { "type": "string", "description": "From get_my_user's uri field" },
+          "status": { "type": "string", "enum": ["active", "canceled"] }
+        },
+        "required": ["userUri"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "cancel_scheduled_event",
+      "description": "Cancel a scheduled meeting and notify the invitee. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventUuid": { "type": "string" },
+          "reason": { "type": "string" }
+        },
+        "required": ["eventUuid"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
