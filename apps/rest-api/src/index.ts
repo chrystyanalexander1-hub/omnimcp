@@ -6,7 +6,7 @@ async function main(): Promise<void> {
   const context = createAppContext(env);
   await context.loadConnectors();
 
-  const app = buildServer(context, env);
+  const app = await buildServer(context, env);
   const port = Number(process.env.PORT ?? 3000);
   await app.listen({ port, host: "0.0.0.0" });
 

@@ -149,6 +149,32 @@ que rechazaría una llamada manual suya hoy.
   (el caso de hoy) no hace falta; correr más de una réplica sin eso puede duplicar una
   ejecución.
 
+## Panel web (`apps/web-panel`)
+
+Ya no es un placeholder — es una SPA de Next.js (login + dashboard) que habla
+directo con `apps/rest-api` por `fetch`, sin agregar ningún endpoint nuevo al
+backend. Pensado para alguien sin conocimientos técnicos: nada de comandos, todo por
+formularios.
+
+- `lib/session.ts`: la sesión (token, tenant, rol) vive solo en `localStorage` del
+  navegador — no hay server-side rendering que la necesite, así que no hace falta
+  tocar cookies.
+- `lib/api.ts`: un único wrapper de `fetch` para todos los endpoints existentes.
+- 4 pestañas — Conectores, Herramientas, Automatizaciones, Auditoría (esta última
+  oculta para el rol `member`, igual que ya exige `GET /audit` en el backend). Las
+  pestañas de Herramientas y Automatizaciones usan un textarea de JSON para
+  parámetros/pasos en vez de generar un formulario por cada una de las ~90 tools
+  entre los 21 conectores — desproporcionado para esta fase, y el textarea sirve
+  para todas por igual.
+- El panel corre en la PC del usuario (`localhost:3300` — el 3000 ya lo usa
+  `rest-api` cuando corre local) y le habla al servidor real por internet vía
+  `NEXT_PUBLIC_API_BASE_URL`; no hace falta desplegarlo aparte para usarlo.
+- Esto exigió agregar CORS a `apps/rest-api` (`@fastify/cors`, origen reflejado)
+  porque el navegador bloquea por default una página en un origen (`localhost:3300`)
+  llamando a una API en otro (el dominio/IP del servidor). La autorización real
+  sigue siendo el `Authorization: Bearer` de cada request — CORS solo controla qué
+  navegadores pueden *leer* la respuesta, no da acceso por sí solo.
+
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
 - Los ~39 conectores restantes del listado original (Stripe, LinkedIn, X, Discord,
@@ -229,8 +255,6 @@ que rechazaría una llamada manual suya hoy.
     acepta una URL (que Telegram baja solo) o el archivo en base64 subido
     directo, dos caminos reales que la propia API de Telegram soporta.
 - Apps nativas de Android y Windows.
-- Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
-  verifica conectividad con la API REST.
 - Facturación / planes de suscripción SaaS.
 - Escalar `apps/mcp-gateway`/`apps/rest-api` a múltiples réplicas: hoy el catálogo de
   conectores vive en memoria (`InMemoryConnectorRepository`) porque se reconstruye en

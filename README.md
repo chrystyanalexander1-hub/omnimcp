@@ -21,7 +21,8 @@ apps/
   rest-api                API HTTP multi-usuario (Fastify) para el panel/SDK/apps
   automation-worker        corre flujos programados (cron) — ver "Automatización"
                           en docs/architecture.md
-  web-panel               placeholder Next.js (fuera de alcance esta fase)
+  web-panel               login + dashboard (Next.js) — conectores, herramientas,
+                          automatizaciones, auditoría, sin usar la terminal
 connectors/     (21 conectores reales — ver docs/architecture.md para el detalle
                 completo de auth y tools de cada uno)
   github, google-drive, meta-ads, tiktok-ads, whatsapp-business, telegram,
@@ -103,6 +104,22 @@ curl -X POST http://localhost:3000/workflows/<id>/run -H "Authorization: Bearer 
 # Ver el historial de corridas:
 curl http://localhost:3000/workflows/<id>/runs -H "Authorization: Bearer <accessToken>"
 ```
+
+## Panel web
+
+En vez de `curl`, `apps/web-panel` da login + dashboard normal por navegador.
+
+```bash
+cp apps/web-panel/.env.local.example apps/web-panel/.env.local
+# editar NEXT_PUBLIC_API_BASE_URL con la URL de tu rest-api (local o desplegado)
+
+npm run dev --workspace apps/web-panel   # http://localhost:3300
+```
+
+Abrí `http://localhost:3300` en el navegador, iniciá sesión, y desde ahí instalás
+conectores, les das credenciales, ejecutás tools, y armás automatizaciones — sin
+terminal. Nota: `apps/rest-api` necesita CORS habilitado para que el navegador deje
+llamarlo desde otro origen (`@fastify/cors`, ya wireado en `src/server.ts`).
 
 ## Tests
 

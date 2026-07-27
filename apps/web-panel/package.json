@@ -2,11 +2,11 @@
   "name": "@omnimcp/web-panel",
   "version": "0.1.0",
   "private": true,
-  "description": "Placeholder for the OmniMCP admin panel — out of scope for this phase, see docs/architecture.md.",
+  "description": "OmniMCP AI admin panel — login, connectors, tools, automations, audit log.",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3300",
     "build": "next build",
-    "start": "next start"
+    "start": "next start -p 3300"
   },
   "dependencies": {
     "next": "^15.0.3",

@@ -1,0 +1,247 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  ApiError,
+  createWorkflow,
+  deleteWorkflow,
+  listWorkflowRuns,
+  listWorkflows,
+  runWorkflowNow,
+  toggleWorkflow,
+  type WorkflowDto,
+  type WorkflowRunDto,
+} from "../../../lib/api";
+import { getSession } from "../../../lib/session";
+
+const STEPS_PLACEHOLDER = JSON.stringify(
+  [{ qualifiedToolName: "github.list_repos", params: {} }],
+  null,
+  2,
+);
+
+export default function AutomatizacionesPage() {
+  const [workflows, setWorkflows] = useState<WorkflowDto[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [statusById, setStatusById] = useState<Record<string, string>>({});
+  const [runsById, setRunsById] = useState<Record<string, WorkflowRunDto[]>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [cronExpression, setCronExpression] = useState("");
+  const [stepsText, setStepsText] = useState(STEPS_PLACEHOLDER);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const token = getSession()?.accessToken ?? "";
+
+  async function refresh() {
+    try {
+      setWorkflows(await listWorkflows(token));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudieron cargar las automatizaciones.");
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleCreate() {
+    setCreateError(null);
+    let steps;
+    try {
+      steps = JSON.parse(stepsText);
+    } catch {
+      setCreateError("Los pasos no son un JSON válido.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await createWorkflow(token, name, cronExpression.trim() || undefined, steps);
+      setName("");
+      setCronExpression("");
+      setStepsText(STEPS_PLACEHOLDER);
+      await refresh();
+    } catch (err) {
+      setCreateError(err instanceof ApiError ? err.message : "Error al crear la automatización.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRunNow(id: string) {
+    setBusyId(id);
+    try {
+      const run = await runWorkflowNow(token, id);
+      setStatusById((s) => ({ ...s, [id]: `Corrida terminada: ${run.status}` }));
+      await refresh();
+    } catch (err) {
+      setStatusById((s) => ({ ...s, [id]: err instanceof ApiError ? err.message : "Error al ejecutar." }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleToggle(wf: WorkflowDto) {
+    setBusyId(wf.id);
+    try {
+      await toggleWorkflow(token, wf.id, !wf.enabled);
+      await refresh();
+    } catch (err) {
+      setStatusById((s) => ({ ...s, [wf.id]: err instanceof ApiError ? err.message : "Error al cambiar el estado." }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setBusyId(id);
+    try {
+      await deleteWorkflow(token, id);
+      await refresh();
+    } catch (err) {
+      setStatusById((s) => ({ ...s, [id]: err instanceof ApiError ? err.message : "Error al borrar." }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleToggleRuns(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    if (!runsById[id]) {
+      try {
+        const runs = await listWorkflowRuns(token, id);
+        setRunsById((r) => ({ ...r, [id]: runs }));
+      } catch (err) {
+        setStatusById((s) => ({ ...s, [id]: err instanceof ApiError ? err.message : "Error al cargar el historial." }));
+      }
+    }
+  }
+
+  return (
+    <section>
+      <h2>Automatizaciones</h2>
+      <p className="hint">
+        Un flujo ejecuta una o más tools en orden, solo o programado por horario (cron).
+      </p>
+
+      {error && <div className="error-box">{error}</div>}
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Crear automatización</h3>
+        {createError && <div className="error-box">{createError}</div>}
+        <div className="field">
+          <label htmlFor="name">Nombre</label>
+          <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="cron">Horario cron (opcional — vacío = solo manual)</label>
+          <input
+            id="cron"
+            type="text"
+            placeholder="ej: 0 9 * * * (todos los días a las 9am)"
+            value={cronExpression}
+            onChange={(e) => setCronExpression(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="steps">Pasos (JSON)</label>
+          <textarea id="steps" value={stepsText} onChange={(e) => setStepsText(e.target.value)} />
+          <span className="hint">
+            Si un paso usa una tool sensible, agregale &quot;confirmSensitive&quot;: true.
+          </span>
+        </div>
+        <button onClick={handleCreate} disabled={creating || !name.trim()}>
+          {creating ? "Creando…" : "Crear"}
+        </button>
+      </div>
+
+      {!workflows && !error && <p>Cargando…</p>}
+      {workflows?.length === 0 && <p className="hint">Todavía no creaste ninguna automatización.</p>}
+
+      {workflows?.map((wf) => (
+        <div key={wf.id} className="card">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div>
+              <strong>{wf.name}</strong>{" "}
+              <span className="hint">
+                ({wf.cronExpression ?? "solo manual"}
+                {wf.nextRunAt ? ` · próxima: ${new Date(wf.nextRunAt).toLocaleString()}` : ""})
+              </span>
+            </div>
+            <span className={`badge ${wf.enabled ? "success" : "warn"}`}>{wf.enabled ? "Activo" : "Pausado"}</span>
+          </div>
+
+          <p className="hint" style={{ marginTop: "0.5rem" }}>
+            {wf.steps.map((s) => s.qualifiedToolName).join(" → ")}
+          </p>
+
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+            <button disabled={busyId === wf.id} onClick={() => handleRunNow(wf.id)}>
+              Ejecutar ahora
+            </button>
+            <button className="secondary" disabled={busyId === wf.id} onClick={() => handleToggle(wf)}>
+              {wf.enabled ? "Pausar" : "Activar"}
+            </button>
+            <button className="secondary" onClick={() => handleToggleRuns(wf.id)}>
+              {expandedId === wf.id ? "Ocultar historial" : "Ver historial"}
+            </button>
+            <button className="danger" disabled={busyId === wf.id} onClick={() => handleDelete(wf.id)}>
+              Borrar
+            </button>
+          </div>
+
+          {statusById[wf.id] && <p className="hint" style={{ marginTop: "0.5rem" }}>{statusById[wf.id]}</p>}
+
+          {expandedId === wf.id && (
+            <table style={{ marginTop: "0.75rem" }}>
+              <thead>
+                <tr>
+                  <th>Inicio</th>
+                  <th>Estado</th>
+                  <th>Pasos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(runsById[wf.id] ?? []).map((run) => (
+                  <tr key={run.id}>
+                    <td>{new Date(run.startedAt).toLocaleString()}</td>
+                    <td>
+                      <span
+                        className={`badge ${run.status === "success" ? "success" : run.status === "failure" ? "error" : "warn"}`}
+                      >
+                        {run.status}
+                      </span>
+                    </td>
+                    <td>
+                      {run.stepResults.map((r, i) => (
+                        <div key={i}>
+                          {r.qualifiedToolName}: {r.outcome}
+                          {r.errorMessage ? ` (${r.errorMessage})` : ""}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+                {(runsById[wf.id] ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="hint">
+                      Todavía no corrió ninguna vez.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
