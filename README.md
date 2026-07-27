@@ -136,3 +136,5 @@ npm run typecheck
   agregar un conector nuevo sin tocar el núcleo.
 - [`docs/security.md`](docs/security.md) — autenticación, cifrado, aislamiento
   multi-tenant, auditoría.
+- [`docs/chatgpt-actions-guide.md`](docs/chatgpt-actions-guide.md) — conectar un
+  Custom GPT de ChatGPT vía Actions (requiere HTTPS).

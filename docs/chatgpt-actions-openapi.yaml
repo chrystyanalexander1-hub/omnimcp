@@ -1,0 +1,125 @@
+openapi: 3.1.0
+info:
+  title: OmniMCP AI
+  description: >
+    Universal API to operate GitHub, Meta Ads, Shopify, Slack, Stripe, and 20+
+    other platforms through one consistent interface: discover which tools are
+    available, then execute any of them by name.
+  version: "1.0.0"
+servers:
+  - url: https://REEMPLAZAR-CON-TU-DOMINIO
+security:
+  - bearerAuth: []
+paths:
+  /tools:
+    get:
+      operationId: listTools
+      summary: List every tool available to the authenticated tenant across all installed connectors.
+      description: >
+        Always call this first if you don't already know the exact qualified
+        tool name you need — names are namespaced like "github.create_issue"
+        or "stripe.create_refund" and vary by which connectors the tenant has
+        installed.
+      responses:
+        "200":
+          description: Available tools.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Qualified tool name, e.g. "github.create_issue".
+                    sensitive:
+                      type: boolean
+                      description: >
+                        If true, executeTool requires an explicit
+                        confirmationToken — ask the user to confirm the action
+                        in plain language before calling it.
+                    description:
+                      type: string
+  /connectors:
+    get:
+      operationId: listConnectors
+      summary: List the connector catalog and which ones are installed for this tenant.
+      responses:
+        "200":
+          description: Connector catalog.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    displayName:
+                      type: string
+                    authType:
+                      type: string
+                      enum: [api_key, oauth2, none]
+                    tools:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          sensitive:
+                            type: boolean
+  /tools/execute:
+    post:
+      operationId: executeTool
+      summary: Execute one tool by its qualified name with the given parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [qualifiedToolName, params]
+              properties:
+                qualifiedToolName:
+                  type: string
+                  description: Exact name from listTools, e.g. "github.create_issue".
+                params:
+                  type: object
+                  description: Arguments matching that tool's expected input — ask the user for anything you don't already know rather than guessing.
+                confirmationToken:
+                  type: string
+                  description: >
+                    Only needed when the tool is sensitive. After the user
+                    explicitly confirms in the conversation, resend the same
+                    call with this set to "confirmed-via-chatgpt".
+      responses:
+        "200":
+          description: Execution result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isError:
+                    type: boolean
+                  content:
+                    description: The tool's raw output — summarize it for the user rather than dumping it verbatim.
+        "428":
+          description: >
+            The tool is sensitive and no confirmationToken was supplied. Tell
+            the user what the action would do, ask them to confirm, then
+            resend the call with confirmationToken set.
+        "403":
+          description: Not installed, not permitted, or the connector's credential is missing/revoked.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        An OmniMCP API key (not the short-lived login token) — issue one via
+        POST /api-keys while logged in, and paste it into the GPT's Action
+        authentication as a Bearer token.
