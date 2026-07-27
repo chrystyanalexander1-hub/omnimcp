@@ -28,6 +28,7 @@ const authSchema = z.object({
       clientSecretEnvVar: z.string(),
     })
     .optional(),
+  sharedEnvVars: z.array(z.string()).optional(),
 });
 
 const manifestSchema = z.object({
@@ -75,6 +76,7 @@ export async function loadConnectorManifests(connectorsDir: string): Promise<Con
       type: parsed.auth.type,
       ...(parsed.auth.envVar !== undefined ? { envVar: parsed.auth.envVar } : {}),
       ...(parsed.auth.oauth !== undefined ? { oauth: parsed.auth.oauth } : {}),
+      ...(parsed.auth.sharedEnvVars !== undefined ? { sharedEnvVars: parsed.auth.sharedEnvVars } : {}),
     };
 
     manifests.push({

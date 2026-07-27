@@ -56,6 +56,13 @@ Reglas:
     incluyendo el flujo de authorization code + PKCE ya implementado de forma genérica
     en `apps/rest-api/src/routes/oauth.ts` — no hay que reescribirlo por conector.
   - `"none"`: sin credencial (poco común).
+- `auth.sharedEnvVars` (opcional, cualquier `auth.type`): lista de nombres de
+  variables de entorno que el gateway copia tal cual desde su propio proceso al del
+  conector — para config estática de plataforma que **no** es un secreto por-tenant
+  ni un client id/secret de OAuth. El caso de referencia es el "developer token" fijo
+  que exige la API de Google Ads además del OAuth normal del usuario. Ver
+  `connectors/google-ads/connector.manifest.json`. Usalo solo cuando de verdad haga
+  falta — la mayoría de los conectores no lo necesitan.
 - `sensitive: true` en cualquier tool obliga a que el llamador confirme
   explícitamente antes de que `ExecuteTool` la despache — usalo para todo lo
   destructivo o irreversible (borrar, enviar dinero, publicar en público, etc.). No

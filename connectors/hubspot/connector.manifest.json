@@ -1,0 +1,62 @@
+{
+  "id": "hubspot",
+  "displayName": "HubSpot",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "api_key",
+    "envVar": "HUBSPOT_ACCESS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "list_contacts",
+      "description": "List CRM contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "limit": { "type": "number", "default": 20 } },
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_contact",
+      "description": "Create a new CRM contact.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        },
+        "required": ["email"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "search_deals",
+      "description": "Search deals by name (read-only).",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "query": { "type": "string" }, "limit": { "type": "number", "default": 20 } },
+        "required": ["query"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "update_deal_stage",
+      "description": "Move a deal to a different pipeline stage — can trigger downstream sales automations/notifications.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dealId": { "type": "string" },
+          "dealStage": { "type": "string" }
+        },
+        "required": ["dealId", "dealStage"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}

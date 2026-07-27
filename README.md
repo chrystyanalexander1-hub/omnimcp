@@ -35,6 +35,15 @@ connectors/
                           send_template_message (sensitive)
   telegram                  Token de bot, tools: get_me, get_chat, get_updates,
                           send_message (sensitive)
+  google-ads                 OAuth2 + PKCE + developer token compartido, tools:
+                          list_accessible_customers, search_campaigns,
+                          create_campaign (sensitive), update_campaign_status
+                          (sensitive)
+  hubspot                    Token de larga duración, tools: list_contacts,
+                          create_contact, search_deals, update_deal_stage
+                          (sensitive)
+  google-analytics            OAuth2 + PKCE, tools: list_account_summaries,
+                          run_report
 infra/migrations/          esquema SQL de Postgres + Row-Level Security
 docs/                       arquitectura, guía para escribir conectores, seguridad
 ```

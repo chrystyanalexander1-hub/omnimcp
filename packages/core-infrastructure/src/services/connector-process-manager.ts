@@ -107,6 +107,10 @@ export class ConnectorProcessManager implements ConnectorInvoker {
       if (clientId) env[connector.auth.oauth.clientIdEnvVar] = clientId;
       if (clientSecret) env[connector.auth.oauth.clientSecretEnvVar] = clientSecret;
     }
+    for (const key of connector.auth.sharedEnvVars ?? []) {
+      const value = process.env[key];
+      if (value) env[key] = value;
+    }
 
     const transport = new StdioClientTransport({
       command: connector.transport.command,

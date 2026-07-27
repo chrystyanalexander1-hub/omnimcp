@@ -103,10 +103,10 @@ intento de ejecución.
 
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
-- Los ~54 conectores restantes del listado original (Google Calendar/Workspace,
-  CRMs, herramientas de analítica, Shopify, Stripe, bases de datos, generación de IA
-  multimedia, etc.) — se agregan siguiendo `docs/connector-authoring-guide.md`, sin
-  tocar el núcleo. Ya están, además de GitHub y Google Drive:
+- Los ~51 conectores restantes del listado original (Google Calendar/Workspace,
+  Shopify, Stripe, bases de datos, generación de IA multimedia, etc.) — se agregan
+  siguiendo `docs/connector-authoring-guide.md`, sin tocar el núcleo. Ya están,
+  además de GitHub y Google Drive:
   - `connectors/meta-ads` — token de larga duración, campañas y métricas.
   - `connectors/tiktok-ads` — mismo patrón que Meta Ads, header `Access-Token`
     propio de la API de TikTok Business en vez de `Authorization: Bearer`.
@@ -114,6 +114,18 @@ intento de ejecución.
     distinto scope de permisos), envío de mensajes marcado `sensitive`.
   - `connectors/telegram` — token de bot embebido en la URL en vez de header,
     ejemplo más simple posible del patrón `api_key`.
+  - `connectors/google-ads` — mismo OAuth2+PKCE que Google Drive, pero además
+    necesita un "developer token" fijo de la app (no por-tenant). Esto llevó a
+    agregar `auth.sharedEnvVars` al contrato de conector (ver
+    `packages/core-domain/src/entities/connector.ts`): nombres de variables de
+    entorno que el gateway inyecta tal cual desde su propio proceso a cualquier
+    conector que las declare — para config estática de plataforma que no es un
+    client id/secret de OAuth. Es la única extensión al núcleo que un conector
+    nuevo terminó necesitando hasta ahora.
+  - `connectors/hubspot` — token de larga duración (HubSpot recomienda "Private
+    App" tokens para este caso, igual que el PAT de GitHub).
+  - `connectors/google-analytics` — mismo patrón OAuth2+PKCE, de solo lectura
+    (reportes GA4); no tiene ninguna tool `sensitive` porque no escribe nada.
 - Apps nativas de Android y Windows.
 - Panel web completo — `apps/web-panel` es hoy un placeholder de Next.js que solo
   verifica conectividad con la API REST.

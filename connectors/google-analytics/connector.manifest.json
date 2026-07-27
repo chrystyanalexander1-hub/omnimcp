@@ -1,0 +1,42 @@
+{
+  "id": "google-analytics",
+  "displayName": "Google Analytics",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GOOGLE_ANALYTICS_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/analytics.readonly"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_account_summaries",
+      "description": "List GA4 accounts and properties accessible to the authenticated token.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "run_report",
+      "description": "Run a GA4 report: dimensions x metrics over a date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "propertyId": { "type": "string", "description": "Numeric GA4 property ID, no prefix" },
+          "startDate": { "type": "string", "description": "YYYY-MM-DD or a relative value like 7daysAgo" },
+          "endDate": { "type": "string", "description": "YYYY-MM-DD or 'today'" },
+          "dimensions": { "type": "array", "items": { "type": "string" }, "default": ["date"] },
+          "metrics": { "type": "array", "items": { "type": "string" }, "default": ["activeUsers", "sessions"] }
+        },
+        "required": ["propertyId", "startDate", "endDate"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    }
+  ]
+}

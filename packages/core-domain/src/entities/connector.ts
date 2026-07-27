@@ -25,6 +25,14 @@ export interface ConnectorAuth {
     readonly clientIdEnvVar: string;
     readonly clientSecretEnvVar: string;
   };
+  /**
+   * Names of additional env vars — set once on the gateway process, shared across
+   * every tenant, never per-tenant — that this connector's process needs verbatim.
+   * Exists for platform-level static config that isn't an OAuth client id/secret,
+   * e.g. Google Ads' "developer token", which every tenant's calls must present
+   * alongside their own OAuth token. Most connectors don't need this.
+   */
+  readonly sharedEnvVars?: readonly string[];
 }
 
 /**

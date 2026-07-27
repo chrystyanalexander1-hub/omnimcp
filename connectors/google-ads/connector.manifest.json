@@ -1,0 +1,72 @@
+{
+  "id": "google-ads",
+  "displayName": "Google Ads",
+  "version": "0.1.0",
+  "transport": { "type": "stdio", "command": "node", "args": ["dist/index.js"] },
+  "auth": {
+    "type": "oauth2",
+    "envVar": "GOOGLE_ADS_REFRESH_TOKEN",
+    "oauth": {
+      "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "scopes": ["https://www.googleapis.com/auth/adwords"],
+      "clientIdEnvVar": "GOOGLE_CLIENT_ID",
+      "clientSecretEnvVar": "GOOGLE_CLIENT_SECRET"
+    },
+    "sharedEnvVars": ["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_LOGIN_CUSTOMER_ID"]
+  },
+  "tools": [
+    {
+      "name": "list_accessible_customers",
+      "description": "List Google Ads customer account IDs accessible to the authenticated token.",
+      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "sensitive": false
+    },
+    {
+      "name": "search_campaigns",
+      "description": "Run a GAQL query against a customer's campaigns (read-only). Defaults to listing id/name/status if no query is given.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "10-digit account ID, no dashes" },
+          "query": { "type": "string", "description": "A GAQL query; defaults to a basic campaign listing" }
+        },
+        "required": ["customerId"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "create_campaign",
+      "description": "Create a new campaign budget and campaign. Spends real budget once enabled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "campaignName": { "type": "string" },
+          "dailyBudgetMicros": { "type": "number", "description": "Budget in micros (1 unit of currency = 1,000,000 micros)" },
+          "advertisingChannelType": { "type": "string", "description": "e.g. SEARCH, DISPLAY, VIDEO, SHOPPING" },
+          "status": { "type": "string", "enum": ["ENABLED", "PAUSED"], "default": "PAUSED" }
+        },
+        "required": ["customerId", "campaignName", "dailyBudgetMicros", "advertisingChannelType"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "update_campaign_status",
+      "description": "Pause, enable, or remove an existing campaign, immediately changing whether it spends budget.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string" },
+          "campaignId": { "type": "string" },
+          "status": { "type": "string", "enum": ["ENABLED", "PAUSED", "REMOVED"] }
+        },
+        "required": ["customerId", "campaignId", "status"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    }
+  ]
+}
