@@ -1,5 +1,7 @@
 # OmniMCP AI
 
+Repositorio: https://github.com/chrystyanalexander1-hub/omnimcp
+
 Gateway MCP universal: agrega conectores independientes (cada uno su propio servidor
 MCP) detrás de un único punto de autenticación, permisos, auditoría y rate limiting
 multi-tenant. Ver `docs/architecture.md` para el diseño completo y el alcance de esta
