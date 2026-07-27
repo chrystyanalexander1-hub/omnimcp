@@ -1,4 +1,4 @@
-import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey(),
@@ -76,4 +76,26 @@ export const auditEvents = pgTable("audit_events", {
   outcome: text("outcome").notNull(),
   errorMessage: text("error_message"),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const workflows = pgTable("workflows", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  createdByUserId: uuid("created_by_user_id").notNull(),
+  name: text("name").notNull(),
+  cronExpression: text("cron_expression"),
+  steps: jsonb("steps").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const workflowRuns = pgTable("workflow_runs", {
+  id: uuid("id").primaryKey(),
+  workflowId: uuid("workflow_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  status: text("status").notNull(),
+  stepResults: jsonb("step_results").notNull(),
 });

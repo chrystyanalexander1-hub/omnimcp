@@ -19,6 +19,8 @@ apps/
   mcp-gateway             servidor MCP (stdio) que expone las tools de todos los
                           conectores instalados a un cliente de IA
   rest-api                API HTTP multi-usuario (Fastify) para el panel/SDK/apps
+  automation-worker        corre flujos programados (cron) — ver "Automatización"
+                          en docs/architecture.md
   web-panel               placeholder Next.js (fuera de alcance esta fase)
 connectors/     (15 conectores reales — ver docs/architecture.md para el detalle
                 completo de auth y tools de cada uno)
@@ -81,6 +83,24 @@ curl -X POST http://localhost:3000/connectors/github/credentials \
 curl -X POST http://localhost:3000/tools/execute \
   -H "Authorization: Bearer <accessToken>" -H "Content-Type: application/json" \
   -d '{"qualifiedToolName":"github.list_repos","params":{}}'
+```
+
+Crear una automatización programada (corre sola cada minuto, vía `apps/automation-worker`):
+
+```bash
+curl -X POST http://localhost:3000/workflows \
+  -H "Authorization: Bearer <accessToken>" -H "Content-Type: application/json" \
+  -d '{
+    "name": "Listar repos cada minuto",
+    "cronExpression": "* * * * *",
+    "steps": [{ "qualifiedToolName": "github.list_repos", "params": {} }]
+  }'
+
+# Dispararla ahora mismo sin esperar el cron:
+curl -X POST http://localhost:3000/workflows/<id>/run -H "Authorization: Bearer <accessToken>"
+
+# Ver el historial de corridas:
+curl http://localhost:3000/workflows/<id>/runs -H "Authorization: Bearer <accessToken>"
 ```
 
 ## Tests

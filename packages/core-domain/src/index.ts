@@ -10,3 +10,5 @@ export * from "./entities/connector-installation.js";
 export * from "./entities/credential-grant.js";
 export * from "./entities/permission.js";
 export * from "./entities/audit-event.js";
+export * from "./entities/workflow.js";
+export * from "./entities/workflow-run.js";

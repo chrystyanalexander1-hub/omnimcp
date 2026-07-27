@@ -101,6 +101,54 @@ tenant, Postgres con Row-Level Security como capa adicional sobre el filtrado
 explícito por `tenant_id` que ya hace cada repositorio, auditoría inmutable de cada
 intento de ejecución.
 
+## Automatización (flujos, pipelines, programaciones, acciones condicionadas)
+
+Un `Workflow` es una secuencia de pasos (`WorkflowStep`), cada uno una llamada a una
+tool namespaced (`qualifiedToolName` + `params`), con un disparador opcional por cron
+(`cronExpression`) y una condición simple por paso (`runIf: "always" |
+"previous_success" | "previous_failure"`, evaluada contra el resultado del paso
+anterior). Ver `packages/core-domain/src/entities/workflow.ts` y `workflow-run.ts`.
+
+**El motor no reimplementa nada de `ExecuteTool`.**
+`packages/core-application/src/use-cases/run-workflow.ts` corre cada paso llamando al
+mismo `ExecuteTool` que usa una llamada manual — mismo chequeo de instalación,
+permisos, rate limit, descifrado de credencial y auditoría. Lo único que agrega es la
+secuencia y el gate de `runIf` entre pasos.
+
+**Acciones sensibles en una automatización desatendida.** Una corrida programada no
+tiene a nadie presente para confirmar nada en el momento. La regla: si un paso apunta
+a una tool `sensitive`, quien crea el flujo (siempre `owner`/`admin`) tiene que pasar
+`confirmSensitive: true` para ese paso **al crear el flujo** —
+`CreateWorkflow` (`packages/core-application/src/use-cases/create-workflow.ts`)
+rechaza guardar el paso si no viene esa confirmación, y la traduce en un
+`confirmationToken` fijo que cada corrida futura reutiliza. La creación misma es la
+autorización explícita; no hay forma de que un flujo termine ejecutando algo sensible
+sin que un humano lo haya aprobado al menos una vez, a propósito. Además,
+`RunWorkflow` vuelve a resolver el rol del creador **en el momento de correr** (no un
+snapshot guardado) — si le revocaron permisos después, `ExecuteTool` lo rechaza igual
+que rechazaría una llamada manual suya hoy.
+
+**Quién dispara la ejecución:**
+- `apps/automation-worker`: un proceso nuevo, siempre activo, que cada
+  `AUTOMATION_POLL_INTERVAL_SECONDS` (default 30) llama
+  `RunDueWorkflows` — trae los flujos habilitados cuyo `nextRunAt` ya pasó, los corre,
+  y recalcula el próximo horario con `CronScheduler` (`cron-parser`, en
+  `packages/core-infrastructure/src/services/cron-parser-scheduler.ts`).
+- `POST /workflows/:id/run` (`apps/rest-api/src/routes/workflows.ts`): disparo manual
+  bajo demanda, mismo motor (`RunWorkflow`), pero pasando por `TriggerWorkflow` que
+  valida tenant y rol primero — a diferencia del worker, este endpoint sí puede
+  recibir una llamada de un tenant/rol que no corresponde al flujo, así que valida.
+
+**Fuera de alcance por ahora, documentado, no descartado:**
+- Disparo por evento externo (webhooks) — necesitaría infraestructura de ingestión de
+  webhooks que no existe todavía.
+- Encadenar el resultado de un paso como input del siguiente (templating) — se dejó
+  afuera a propósito para no sumar un mini-lenguaje de expresiones como superficie de
+  riesgo sin un caso de uso concreto que lo necesite hoy.
+- Locking distribuido entre réplicas de `automation-worker` — con una sola réplica
+  (el caso de hoy) no hace falta; correr más de una réplica sin eso puede duplicar una
+  ejecución.
+
 ## Qué falta explícitamente (no está descartado, es la hoja de ruta)
 
 - Los ~45 conectores restantes del listado original (Google Calendar/Workspace,

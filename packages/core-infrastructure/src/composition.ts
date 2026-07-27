@@ -1,15 +1,23 @@
 import { Redis } from "ioredis";
 import {
   AuthenticateUser,
+  CreateWorkflow,
+  DeleteWorkflow,
   ExecuteTool,
+  GetWorkflowRuns,
   GrantConnectorCredential,
   InstallConnector,
   IssueApiKey,
   ListAvailableTools,
+  ListWorkflows,
   RecordAuditEvent,
   RegisterConnector,
   RegisterTenant,
   RevokeConnectorCredential,
+  RunDueWorkflows,
+  RunWorkflow,
+  ToggleWorkflow,
+  TriggerWorkflow,
 } from "@omnimcp/core-application";
 import type { Env } from "./config/env.js";
 import { createDatabase, type Database } from "./db/client.js";
@@ -23,9 +31,12 @@ import { PostgresPermissionRepository } from "./repositories/postgres-permission
 import { PostgresSessionRepository } from "./repositories/postgres-session-repository.js";
 import { PostgresTenantRepository } from "./repositories/postgres-tenant-repository.js";
 import { PostgresUserRepository } from "./repositories/postgres-user-repository.js";
+import { PostgresWorkflowRepository } from "./repositories/postgres-workflow-repository.js";
+import { PostgresWorkflowRunRepository } from "./repositories/postgres-workflow-run-repository.js";
 import { AesCryptoService } from "./services/aes-crypto-service.js";
 import { BcryptPasswordHasher } from "./services/bcrypt-password-hasher.js";
 import { ConnectorProcessManager } from "./services/connector-process-manager.js";
+import { CronParserScheduler } from "./services/cron-parser-scheduler.js";
 import { JwtTokenService } from "./services/jwt-token-service.js";
 import { RedisRateLimiter } from "./services/redis-rate-limiter.js";
 import { CryptoIdGenerator, SystemClock } from "./services/system-clock.js";
@@ -49,6 +60,8 @@ export interface AppContext {
     readonly credentialGrants: PostgresCredentialGrantRepository;
     readonly permissions: PostgresPermissionRepository;
     readonly auditEvents: PostgresAuditEventRepository;
+    readonly workflows: PostgresWorkflowRepository;
+    readonly workflowRuns: PostgresWorkflowRunRepository;
   };
   readonly services: {
     readonly crypto: AesCryptoService;
@@ -58,6 +71,7 @@ export interface AppContext {
     readonly ids: CryptoIdGenerator;
     readonly rateLimiter: RedisRateLimiter;
     readonly connectorProcessManager: ConnectorProcessManager;
+    readonly cronScheduler: CronParserScheduler;
   };
   readonly useCases: {
     readonly registerTenant: RegisterTenant;
@@ -70,6 +84,14 @@ export interface AppContext {
     readonly revokeConnectorCredential: RevokeConnectorCredential;
     readonly recordAuditEvent: RecordAuditEvent;
     readonly executeTool: ExecuteTool;
+    readonly createWorkflow: CreateWorkflow;
+    readonly listWorkflows: ListWorkflows;
+    readonly toggleWorkflow: ToggleWorkflow;
+    readonly deleteWorkflow: DeleteWorkflow;
+    readonly runWorkflow: RunWorkflow;
+    readonly runDueWorkflows: RunDueWorkflows;
+    readonly triggerWorkflow: TriggerWorkflow;
+    readonly getWorkflowRuns: GetWorkflowRuns;
   };
   /** Loads every connector.manifest.json under env.CONNECTORS_DIR into the catalog. Call once at boot. */
   loadConnectors(): Promise<void>;
@@ -90,6 +112,8 @@ export function createAppContext(env: Env): AppContext {
     credentialGrants: new PostgresCredentialGrantRepository(db),
     permissions: new PostgresPermissionRepository(db),
     auditEvents: new PostgresAuditEventRepository(db),
+    workflows: new PostgresWorkflowRepository(db),
+    workflowRuns: new PostgresWorkflowRunRepository(db),
   };
 
   const services = {
@@ -100,9 +124,21 @@ export function createAppContext(env: Env): AppContext {
     ids: new CryptoIdGenerator(),
     rateLimiter: new RedisRateLimiter(redis, env.RATE_LIMIT_PER_MINUTE),
     connectorProcessManager: new ConnectorProcessManager(),
+    cronScheduler: new CronParserScheduler(),
   };
 
   const recordAuditEvent = new RecordAuditEvent(repositories.auditEvents, services.crypto, services.ids, services.clock);
+  const executeTool = new ExecuteTool(
+    repositories.connectorInstallations,
+    repositories.connectors,
+    repositories.permissions,
+    repositories.credentialGrants,
+    services.crypto,
+    services.rateLimiter,
+    services.connectorProcessManager,
+    recordAuditEvent,
+  );
+  const runWorkflow = new RunWorkflow(repositories.users, executeTool, repositories.workflowRuns, services.ids, services.clock);
 
   const useCases = {
     registerTenant: new RegisterTenant(repositories.tenants, repositories.users, services.passwordHasher, services.ids, services.clock),
@@ -128,16 +164,15 @@ export function createAppContext(env: Env): AppContext {
     ),
     revokeConnectorCredential: new RevokeConnectorCredential(repositories.credentialGrants, services.clock),
     recordAuditEvent,
-    executeTool: new ExecuteTool(
-      repositories.connectorInstallations,
-      repositories.connectors,
-      repositories.permissions,
-      repositories.credentialGrants,
-      services.crypto,
-      services.rateLimiter,
-      services.connectorProcessManager,
-      recordAuditEvent,
-    ),
+    executeTool,
+    createWorkflow: new CreateWorkflow(repositories.workflows, repositories.connectors, services.cronScheduler, services.ids, services.clock),
+    listWorkflows: new ListWorkflows(repositories.workflows),
+    toggleWorkflow: new ToggleWorkflow(repositories.workflows),
+    deleteWorkflow: new DeleteWorkflow(repositories.workflows),
+    runWorkflow,
+    runDueWorkflows: new RunDueWorkflows(repositories.workflows, runWorkflow, services.cronScheduler, services.clock),
+    triggerWorkflow: new TriggerWorkflow(repositories.workflows, runWorkflow),
+    getWorkflowRuns: new GetWorkflowRuns(repositories.workflows, repositories.workflowRuns),
   };
 
   return {

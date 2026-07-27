@@ -65,3 +65,10 @@ export interface ConnectorInvoker {
     credentialSecret: string | null,
   ): Promise<ConnectorToolResult>;
 }
+
+/** Parses/evaluates cron expressions for scheduled workflows. Kept as a port because the domain layer must not depend on a cron-parsing library. */
+export interface CronScheduler {
+  isValid(cronExpression: string): boolean;
+  /** Throws if `cronExpression` is invalid — callers should check `isValid` first when they need to reject bad input gracefully. */
+  nextRunAt(cronExpression: string, after: Date): Date;
+}

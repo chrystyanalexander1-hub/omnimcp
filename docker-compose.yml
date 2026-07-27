@@ -71,6 +71,28 @@ services:
       CONNECTORS_DIR: /app/connectors
     command: sh -c "npm install && npm run build && npm run dev:rest-api"
 
+  # Polls for due scheduled workflows and runs them — see docs/architecture.md's
+  # "Automatización" section. Always-on, same pattern as rest-api (not profile-gated
+  # like gateway, since it isn't a stdio process).
+  automation-worker:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - omnimcp_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://omnimcp:omnimcp@postgres:5432/omnimcp
+      REDIS_URL: redis://redis:6379
+      CONNECTORS_DIR: /app/connectors
+    command: sh -c "npm install && npm run build && npm run dev:automation-worker"
+
   # Not part of `docker compose up` by default — an MCP gateway is a stdio process an
   # MCP client (Claude Desktop, etc.) spawns on demand, not an always-on service. Run
   # it explicitly with: docker compose --profile gateway run --rm gateway

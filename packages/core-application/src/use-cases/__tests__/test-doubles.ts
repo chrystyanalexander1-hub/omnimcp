@@ -15,6 +15,9 @@ import type {
   TenantId,
   User,
   UserId,
+  Workflow,
+  WorkflowId,
+  WorkflowRun,
 } from "@omnimcp/core-domain";
 import { isConnectorInstallationActive, isCredentialGrantActive } from "@omnimcp/core-domain";
 import type {
@@ -27,11 +30,14 @@ import type {
   SessionRepository,
   TenantRepository,
   UserRepository,
+  WorkflowRepository,
+  WorkflowRunRepository,
 } from "../../ports/repositories.js";
 import type {
   Clock,
   ConnectorInvoker,
   ConnectorToolResult,
+  CronScheduler,
   CryptoService,
   EncryptedPayload,
   IdGenerator,
@@ -226,6 +232,44 @@ export class AlwaysAllowRateLimiter implements RateLimiter {
 export class AlwaysDenyRateLimiter implements RateLimiter {
   async consume() {
     return false;
+  }
+}
+
+export class InMemoryWorkflowRepository implements WorkflowRepository {
+  private readonly rows = new Map<string, Workflow>();
+  async findById(id: WorkflowId) {
+    return this.rows.get(id) ?? null;
+  }
+  async listByTenant(tenantId: TenantId) {
+    return [...this.rows.values()].filter((w) => w.tenantId === tenantId);
+  }
+  async listDue(now: Date) {
+    return [...this.rows.values()].filter((w) => w.enabled && w.nextRunAt !== null && w.nextRunAt <= now);
+  }
+  async save(workflow: Workflow) {
+    this.rows.set(workflow.id, workflow);
+  }
+  async delete(id: WorkflowId) {
+    this.rows.delete(id);
+  }
+}
+
+export class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
+  readonly rows: WorkflowRun[] = [];
+  async save(run: WorkflowRun) {
+    this.rows.push(run);
+  }
+  async listByWorkflow(workflowId: WorkflowId, limit = 100) {
+    return this.rows.filter((r) => r.workflowId === workflowId).slice(0, limit);
+  }
+}
+
+export class FakeCronScheduler implements CronScheduler {
+  isValid(expr: string): boolean {
+    return expr !== "invalid-cron";
+  }
+  nextRunAt(_expr: string, after: Date): Date {
+    return new Date(after.getTime() + 60_000);
   }
 }
 

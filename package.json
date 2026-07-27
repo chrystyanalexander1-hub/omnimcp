@@ -14,7 +14,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "dev:gateway": "npm run dev --workspace apps/mcp-gateway",
-    "dev:rest-api": "npm run dev --workspace apps/rest-api"
+    "dev:rest-api": "npm run dev --workspace apps/rest-api",
+    "dev:automation-worker": "npm run dev --workspace apps/automation-worker"
   },
   "engines": {
     "node": ">=20"

@@ -14,6 +14,9 @@ import type {
   TenantId,
   User,
   UserId,
+  Workflow,
+  WorkflowId,
+  WorkflowRun,
 } from "@omnimcp/core-domain";
 
 export interface TenantRepository {
@@ -67,4 +70,18 @@ export interface PermissionRepository {
 export interface AuditEventRepository {
   save(event: AuditEvent): Promise<void>;
   listByTenant(tenantId: TenantId, limit?: number): Promise<AuditEvent[]>;
+}
+
+export interface WorkflowRepository {
+  findById(id: WorkflowId): Promise<Workflow | null>;
+  listByTenant(tenantId: TenantId): Promise<Workflow[]>;
+  /** Enabled workflows whose nextRunAt has passed — what the automation worker polls for. */
+  listDue(now: Date): Promise<Workflow[]>;
+  save(workflow: Workflow): Promise<void>;
+  delete(id: WorkflowId): Promise<void>;
+}
+
+export interface WorkflowRunRepository {
+  save(run: WorkflowRun): Promise<void>;
+  listByWorkflow(workflowId: WorkflowId, limit?: number): Promise<WorkflowRun[]>;
 }

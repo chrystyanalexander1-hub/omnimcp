@@ -10,6 +10,8 @@ const envSchema = z.object({
   CONNECTORS_DIR: z.string().default("./connectors"),
   /** Base URL the REST API is reachable at, used to build OAuth2 redirect_uri values (e.g. https://api.omnimcp.ai). */
   OAUTH_REDIRECT_BASE_URL: z.string().url().default("http://localhost:3000"),
+  /** How often apps/automation-worker checks for due workflows. */
+  AUTOMATION_POLL_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;

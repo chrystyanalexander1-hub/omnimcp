@@ -9,6 +9,8 @@ export type ConnectorId = Brand<string, "ConnectorId">;
 export type ConnectorInstallationId = Brand<string, "ConnectorInstallationId">;
 export type CredentialGrantId = Brand<string, "CredentialGrantId">;
 export type AuditEventId = Brand<string, "AuditEventId">;
+export type WorkflowId = Brand<string, "WorkflowId">;
+export type WorkflowRunId = Brand<string, "WorkflowRunId">;
 
 const asBrand = <T extends string>(value: string): Brand<string, T> => value as Brand<string, T>;
 
@@ -22,3 +24,5 @@ export const ConnectorInstallationId = (value: string): ConnectorInstallationId 
 export const CredentialGrantId = (value: string): CredentialGrantId =>
   asBrand<"CredentialGrantId">(value);
 export const AuditEventId = (value: string): AuditEventId => asBrand<"AuditEventId">(value);
+export const WorkflowId = (value: string): WorkflowId => asBrand<"WorkflowId">(value);
+export const WorkflowRunId = (value: string): WorkflowRunId => asBrand<"WorkflowRunId">(value);
