@@ -38,8 +38,9 @@ Guardá el `key` que te devuelve — se muestra una sola vez.
    > no te dio el usuario — preguntá.
 
 4. En **Actions → Create new action**, pegá el contenido de
-   `docs/chatgpt-actions-openapi.yaml` (cambiando la URL del `servers:` por tu
-   dominio real).
+   `docs/chatgpt-actions-openapi.yaml` tal cual — ya apunta a
+   `https://api.omnimcp-ai.dev`. Si en algún momento cambiás de dominio, hay
+   que actualizar la URL del `servers:` ahí.
 5. En **Authentication**, elegí **API Key**, tipo **Bearer**, y pegá la key del
    paso 1.
 6. Guardá y probá: "Listame mis repos de GitHub" o "Creá un cliente nuevo en

@@ -411,11 +411,10 @@ formularios.
   `infra/migrations/0001_init.sql` estén realmente activas (ver la nota al inicio de
   ese archivo) — hoy la protección real es el filtrado explícito por `tenant_id` en
   cada repositorio, que sí está completo.
-- HTTPS en el Droplet: el servicio `caddy` (`docker-compose.yml`) y la guía
-  (`docs/domain-https.md`) ya existen en el repo — falta que alguien compre un
-  dominio, apunte el DNS, y lo levante en el Droplet. Hasta entonces, el panel y
-  `rest-api` siguen sirviendo por HTTP directo a la IP, y ChatGPT Actions (que
-  exige HTTPS) no puede conectarse todavía.
+- ~~HTTPS en el Droplet~~ — hecho. `caddy` sirve `https://api.omnimcp-ai.dev` y
+  `https://app.omnimcp-ai.dev` con certificado de Let's Encrypt, siguiendo
+  `docs/domain-https.md`. `docs/chatgpt-actions-openapi.yaml` ya apunta al
+  dominio real.
 - `connectors/facebook-pages` y `connectors/whatsapp-business` ahora pueden mandar
   imágenes (`upload_photo`, `send_image_message`); publicar/enviar audio o
   documentos sigue sin implementarse en ninguno de los dos.

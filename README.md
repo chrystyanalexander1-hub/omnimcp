@@ -112,10 +112,9 @@ curl http://localhost:3000/workflows/<id>/runs -H "Authorization: Bearer <access
 ## Panel web
 
 En vez de `curl`, `apps/web-panel` da login + dashboard normal por navegador. Ya
-está desplegado junto al resto en el Droplet — accesible en
-`http://167.71.99.75:3300` (sin HTTPS todavía; ver
-[`docs/domain-https.md`](docs/domain-https.md) para dejarlo con dominio propio
-y certificado, requisito además para conectar ChatGPT Actions).
+está desplegado junto al resto en el Droplet, con HTTPS real vía `caddy` (ver
+[`docs/domain-https.md`](docs/domain-https.md)) — accesible en
+`https://app.omnimcp-ai.dev`. La API vive en `https://api.omnimcp-ai.dev`.
 
 Para correrlo en desarrollo local en vez del que está en el Droplet:
 
