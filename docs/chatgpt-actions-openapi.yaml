@@ -28,19 +28,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      description: Qualified tool name, e.g. "github.create_issue".
-                    sensitive:
-                      type: boolean
-                      description: >
-                        If true, executeTool requires an explicit
-                        confirmationToken — ask the user to confirm the action
-                        in plain language before calling it.
-                    description:
-                      type: string
+                  $ref: '#/components/schemas/Tool'
   /connectors:
     get:
       operationId: listConnectors
@@ -53,24 +41,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    displayName:
-                      type: string
-                    authType:
-                      type: string
-                      enum: [api_key, oauth2, none]
-                    tools:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name:
-                            type: string
-                          sensitive:
-                            type: boolean
+                  $ref: '#/components/schemas/Connector'
   /tools/execute:
     post:
       operationId: executeTool
@@ -80,33 +51,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [qualifiedToolName, params]
-              properties:
-                qualifiedToolName:
-                  type: string
-                  description: Exact name from listTools, e.g. "github.create_issue".
-                params:
-                  type: object
-                  description: Arguments matching that tool's expected input — ask the user for anything you don't already know rather than guessing.
-                confirmationToken:
-                  type: string
-                  description: >
-                    Only needed when the tool is sensitive. After the user
-                    explicitly confirms in the conversation, resend the same
-                    call with this set to "confirmed-via-chatgpt".
+              $ref: '#/components/schemas/ExecuteToolRequest'
       responses:
         "200":
           description: Execution result.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  isError:
-                    type: boolean
-                  content:
-                    description: The tool's raw output — summarize it for the user rather than dumping it verbatim.
+                $ref: '#/components/schemas/ExecuteToolResult'
         "428":
           description: >
             The tool is sensitive and no confirmationToken was supplied. Tell
@@ -115,6 +67,63 @@ paths:
         "403":
           description: Not installed, not permitted, or the connector's credential is missing/revoked.
 components:
+  schemas:
+    Tool:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Qualified tool name, e.g. "github.create_issue".
+        sensitive:
+          type: boolean
+          description: >
+            If true, executeTool requires an explicit confirmationToken —
+            ask the user to confirm the action in plain language before
+            calling it.
+        description:
+          type: string
+    Connector:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        authType:
+          type: string
+          enum: [api_key, oauth2, none]
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              sensitive:
+                type: boolean
+    ExecuteToolRequest:
+      type: object
+      required: [qualifiedToolName, params]
+      properties:
+        qualifiedToolName:
+          type: string
+          description: Exact name from listTools, e.g. "github.create_issue".
+        params:
+          type: object
+          description: Arguments matching that tool's expected input — ask the user for anything you don't already know rather than guessing.
+        confirmationToken:
+          type: string
+          description: >
+            Only needed when the tool is sensitive. After the user
+            explicitly confirms in the conversation, resend the same
+            call with this set to "confirmed-via-chatgpt".
+    ExecuteToolResult:
+      type: object
+      properties:
+        isError:
+          type: boolean
+        content:
+          description: The tool's raw output — summarize it for the user rather than dumping it verbatim.
   securitySchemes:
     bearerAuth:
       type: http
