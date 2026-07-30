@@ -174,3 +174,82 @@ describe("send_video_message", () => {
     expect(textOf(result)).toContain("Invalid parameter");
   });
 });
+
+describe("send_image_message", () => {
+  const tool = () => tools.get("send_image_message")!;
+
+  it("sends by link with an optional caption", async () => {
+    mockFetchResponses({ body: { messages: [{ id: "wamid.image-link" }] } });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      to: "5491122334455",
+      link: "https://example.com/i.jpg",
+      caption: "Look at this",
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(String(url)).toContain("/123/messages");
+    expect(JSON.parse(init.body)).toMatchObject({
+      type: "image",
+      image: { link: "https://example.com/i.jpg", caption: "Look at this" },
+    });
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.image-link" });
+  });
+
+  it("sends by an already-uploaded mediaId without uploading anything", async () => {
+    mockFetchResponses({ body: { messages: [{ id: "wamid.image-media-id" }] } });
+
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455", mediaId: "media-existing" });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [, init] = (fetch as any).mock.calls[0];
+    expect(JSON.parse(init.body)).toMatchObject({ type: "image", image: { id: "media-existing" } });
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.image-media-id" });
+  });
+
+  it("uploads contentBase64 first, then sends using the returned media id", async () => {
+    mockFetchResponses({ body: { id: "media-image-1" } }, { body: { messages: [{ id: "wamid.image-upload" }] } });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      to: "5491122334455",
+      contentBase64: Buffer.from("fake image bytes").toString("base64"),
+      mimeType: "image/jpeg",
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    const [uploadUrl, uploadInit] = (fetch as any).mock.calls[0];
+    expect(String(uploadUrl)).toContain("/123/media");
+    expect((uploadInit.body as FormData).get("type")).toBe("image/jpeg");
+
+    const [, messagesInit] = (fetch as any).mock.calls[1];
+    expect(JSON.parse(messagesInit.body)).toMatchObject({ type: "image", image: { id: "media-image-1" } });
+
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.image-upload" });
+  });
+
+  it("returns an error result when no media reference is given", async () => {
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455" });
+    expect(result.isError).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns an error result when contentBase64 is given without mimeType", async () => {
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455", contentBase64: "aGVsbG8=" });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("mimeType is required");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Invalid parameter" } }, ok: false });
+
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455", link: "https://example.com/i.jpg" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Invalid parameter");
+  });
+});
