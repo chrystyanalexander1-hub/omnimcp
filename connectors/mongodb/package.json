@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js"
   },
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "tsx": "^4.19.1"
+    "tsx": "^4.19.1",
+    "vitest": "^2.1.4"
   }
 }
