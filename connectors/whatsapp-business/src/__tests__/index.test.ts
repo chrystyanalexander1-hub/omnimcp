@@ -366,3 +366,102 @@ describe("list_message_templates", () => {
     expect(textOf(result)).toContain("Invalid OAuth access token");
   });
 });
+
+describe("send_text_message", () => {
+  const tool = () => tools.get("send_text_message")!;
+
+  it("sends a text message", async () => {
+    mockFetchResponses({ body: { messages: [{ id: "wamid.text-1" }] } });
+
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455", body: "Hello there" });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(String(url)).toContain("/123/messages");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toMatchObject({
+      messaging_product: "whatsapp",
+      to: "5491122334455",
+      type: "text",
+      text: { body: "Hello there" },
+    });
+
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.text-1" });
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Recipient phone number not in allowed list" } }, ok: false });
+
+    const result = await tool().handler({ phoneNumberId: "123", to: "5491122334455", body: "Hello there" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Recipient phone number not in allowed list");
+  });
+});
+
+describe("send_template_message", () => {
+  const tool = () => tools.get("send_template_message")!;
+
+  it("sends a template message without body parameters", async () => {
+    mockFetchResponses({ body: { messages: [{ id: "wamid.template-1" }] } });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      to: "5491122334455",
+      templateName: "order_confirmation",
+      languageCode: "en_US",
+      bodyParameters: [],
+    });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body).toMatchObject({
+      type: "template",
+      template: { name: "order_confirmation", language: { code: "en_US" } },
+    });
+    expect(body.template.components).toBeUndefined();
+
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.template-1" });
+  });
+
+  it("includes body parameters as template components when given", async () => {
+    mockFetchResponses({ body: { messages: [{ id: "wamid.template-2" }] } });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      to: "5491122334455",
+      templateName: "order_confirmation",
+      languageCode: "en_US",
+      bodyParameters: ["Alice", "#1234"],
+    });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.template.components).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", text: "Alice" },
+          { type: "text", text: "#1234" },
+        ],
+      },
+    ]);
+
+    expect(jsonOf(result)).toEqual({ messageId: "wamid.template-2" });
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Template name does not exist" } }, ok: false });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      to: "5491122334455",
+      templateName: "does_not_exist",
+      languageCode: "en_US",
+      bodyParameters: [],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Template name does not exist");
+  });
+});
