@@ -29,3 +29,33 @@ export async function graphRequest<T>(
   }
   return json as T;
 }
+
+/**
+ * Uploads bytes to WhatsApp's Media API ahead of sending them, for content that isn't
+ * already hosted at a public URL. Returns a media id usable in place of `link` in any
+ * `send_*_message` tool. Unlike `graphRequest`, this is a multipart/form-data POST —
+ * the Graph API rejects a JSON body for this endpoint.
+ */
+export async function uploadMedia(
+  phoneNumberId: string,
+  contentBase64: string,
+  mimeType: string,
+  filename?: string,
+): Promise<{ id: string }> {
+  const accessToken = requireEnv("WHATSAPP_ACCESS_TOKEN");
+  const form = new FormData();
+  form.set("messaging_product", "whatsapp");
+  form.set("type", mimeType);
+  form.set("file", new Blob([Buffer.from(contentBase64, "base64")], { type: mimeType }), filename ?? "file");
+
+  const res = await fetch(`${GRAPH_API_BASE}/${phoneNumberId}/media`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form,
+  });
+  const json = (await res.json()) as { id?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    throw new WhatsAppApiError(json.error?.message ?? `WhatsApp API error: HTTP ${res.status}`);
+  }
+  return { id: json.id };
+}

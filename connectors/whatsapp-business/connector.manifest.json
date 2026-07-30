@@ -64,14 +64,69 @@
     },
     {
       "name": "send_image_message",
-      "description": "Send an image to a specific recipient, from a public URL or a media ID already uploaded to WhatsApp. Only works within the 24h customer service window unless the recipient messaged first.",
+      "description": "Send an image to a specific recipient, from a public URL, a media ID already uploaded to WhatsApp, or raw base64 content (paired with mimeType). Only works within the 24h customer service window unless the recipient messaged first.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "phoneNumberId": { "type": "string" },
           "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
-          "link": { "type": "string", "description": "Public URL of the image. Provide this or mediaId, not both." },
-          "mediaId": { "type": "string", "description": "ID of media already uploaded via the WhatsApp Media API. Provide this or link, not both." },
+          "link": { "type": "string", "description": "Public URL of the image. Provide this, mediaId, or contentBase64, not more than one." },
+          "mediaId": { "type": "string", "description": "ID of media already uploaded via upload_media or the WhatsApp Media API." },
+          "contentBase64": { "type": "string", "description": "Raw image content, base64-encoded. Requires mimeType." },
+          "mimeType": { "type": "string", "description": "Required when using contentBase64, e.g. image/jpeg, image/png" },
+          "caption": { "type": "string" }
+        },
+        "required": ["phoneNumberId", "to"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "upload_media",
+      "description": "Upload media bytes to WhatsApp ahead of sending, returning a media id reusable across multiple send_*_message calls. Use this when the file isn't already hosted at a public URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "contentBase64": { "type": "string", "description": "Raw file content, base64-encoded" },
+          "mimeType": { "type": "string", "description": "e.g. audio/mpeg, audio/ogg, video/mp4" },
+          "filename": { "type": "string" }
+        },
+        "required": ["phoneNumberId", "contentBase64", "mimeType"],
+        "additionalProperties": false
+      },
+      "sensitive": false
+    },
+    {
+      "name": "send_audio_message",
+      "description": "Send an audio message to a specific recipient, from a public URL, a media ID already uploaded to WhatsApp, or raw base64 content (paired with mimeType). Only works within the 24h customer service window unless the recipient messaged first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
+          "link": { "type": "string", "description": "Public URL of the audio file. Provide this, mediaId, or contentBase64, not more than one." },
+          "mediaId": { "type": "string", "description": "ID of media already uploaded via upload_media or the WhatsApp Media API." },
+          "contentBase64": { "type": "string", "description": "Raw audio content, base64-encoded. Requires mimeType." },
+          "mimeType": { "type": "string", "description": "Required when using contentBase64, e.g. audio/mpeg, audio/ogg" }
+        },
+        "required": ["phoneNumberId", "to"],
+        "additionalProperties": false
+      },
+      "sensitive": true
+    },
+    {
+      "name": "send_video_message",
+      "description": "Send a video to a specific recipient, from a public URL, a media ID already uploaded to WhatsApp, or raw base64 content (paired with mimeType). Only works within the 24h customer service window unless the recipient messaged first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phoneNumberId": { "type": "string" },
+          "to": { "type": "string", "description": "Recipient phone number in E.164 format, no leading +" },
+          "link": { "type": "string", "description": "Public URL of the video. Provide this, mediaId, or contentBase64, not more than one." },
+          "mediaId": { "type": "string", "description": "ID of media already uploaded via upload_media or the WhatsApp Media API." },
+          "contentBase64": { "type": "string", "description": "Raw video content, base64-encoded. Requires mimeType." },
+          "mimeType": { "type": "string", "description": "Required when using contentBase64, e.g. video/mp4" },
           "caption": { "type": "string" }
         },
         "required": ["phoneNumberId", "to"],

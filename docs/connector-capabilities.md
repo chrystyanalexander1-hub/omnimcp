@@ -394,7 +394,10 @@ Autenticación: API Key
 | `list_message_templates` | List approved message templates for a WhatsApp Business Account. | No requerida |
 | `send_text_message` | Send a free-form text message to a specific recipient. Only works within the 24h customer service window unless the recipient messaged first. | ⚠️ Requerida |
 | `send_template_message` | Send a pre-approved message template to a recipient — the only way to start a conversation outside the 24h window. | ⚠️ Requerida |
-| `send_image_message` | Send an image to a specific recipient, from a public URL or a media ID already uploaded to WhatsApp. Only works within the 24h customer service window unless the recipient messaged first. | ⚠️ Requerida |
+| `send_image_message` | Send an image to a specific recipient, from a public URL, an already-uploaded media ID, or raw base64 content. Only works within the 24h customer service window unless the recipient messaged first. | ⚠️ Requerida |
+| `upload_media` | Upload media bytes to WhatsApp ahead of sending, returning a media id reusable across multiple send_*_message calls. | No requerida |
+| `send_audio_message` | Send an audio message to a specific recipient, from a public URL, an already-uploaded media ID, or raw base64 content. Only works within the 24h customer service window unless the recipient messaged first. | ⚠️ Requerida |
+| `send_video_message` | Send a video to a specific recipient, from a public URL, an already-uploaded media ID, or raw base64 content. Only works within the 24h customer service window unless the recipient messaged first. | ⚠️ Requerida |
 
 ## WooCommerce (`woocommerce`)
 Autenticación: API Key
