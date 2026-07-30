@@ -1,0 +1,63 @@
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ToolDefinition } from "@omnimcp/connector-sdk-ts";
+
+const tools = new Map<string, ToolDefinition<any>>();
+
+vi.mock("@omnimcp/connector-sdk-ts", async () => {
+  const actual = await vi.importActual<typeof import("@omnimcp/connector-sdk-ts")>("@omnimcp/connector-sdk-ts");
+  return {
+    ...actual,
+    startConnector: vi.fn(async (definition: { tools: ReadonlyArray<ToolDefinition<any>> }) => {
+      for (const tool of definition.tools) {
+        tools.set(tool.name, {
+          ...tool,
+          async handler(input: any) {
+            try {
+              return await tool.handler(input);
+            } catch (err) {
+              return actual.errorResult(err instanceof Error ? err.message : String(err));
+            }
+          },
+        });
+      }
+    }),
+  };
+});
+
+function textOf(result: { content: Array<{ type: "text"; text: string }> }): string {
+  return result.content[0]!.text;
+}
+
+beforeAll(async () => {
+  process.env.MAKE_WEBHOOK_URL = "https://hook.us1.make.com/abc123";
+  await import("../index.js");
+});
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", vi.fn());
+});
+
+describe("trigger_scenario", () => {
+  const tool = () => tools.get("trigger_scenario")!;
+
+  it("posts the payload to the configured webhook url", async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true });
+
+    const result = await tool().handler({ payload: { event: "order.created", id: 1 } });
+
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(url).toBe("https://hook.us1.make.com/abc123");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ event: "order.created", id: 1 });
+    expect(textOf(result)).toContain("Scenario triggered");
+  });
+
+  it("surfaces a webhook failure as an error result", async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: false, status: 400, text: async () => "invalid payload" });
+
+    const result = await tool().handler({ payload: {} });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("HTTP 400");
+  });
+});
