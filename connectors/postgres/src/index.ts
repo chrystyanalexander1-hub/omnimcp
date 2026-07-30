@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
 import postgres from "postgres";
 import { z } from "zod";
 
@@ -12,14 +12,6 @@ const runQuerySchema = z.object({ sql: z.string(), params: z.array(z.unknown()).
 // cross-tenant sharing risk in keeping it open.
 const sql = postgres(requireEnv("POSTGRES_CONNECTION_STRING"), { max: 3 });
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    return { ok: false as const, message: err instanceof Error ? err.message : String(err) };
-  }
-}
-
 await startConnector({
   name: "postgres",
   version: "0.1.0",
@@ -29,10 +21,9 @@ await startConnector({
       description: "List tables in the connected database's public schema.",
       inputSchema: listTablesSchema,
       async handler() {
-        const result = await safe(
-          () => sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
+        return jsonResult(
+          await sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`,
         );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
       },
     },
     {
@@ -40,11 +31,9 @@ await startConnector({
       description: "List a table's columns, types, and nullability.",
       inputSchema: describeTableSchema,
       async handler({ tableName }) {
-        const result = await safe(
-          () =>
-            sql`select column_name, data_type, is_nullable from information_schema.columns where table_schema = 'public' and table_name = ${tableName} order by ordinal_position`,
+        return jsonResult(
+          await sql`select column_name, data_type, is_nullable from information_schema.columns where table_schema = 'public' and table_name = ${tableName} order by ordinal_position`,
         );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
       },
     },
     {
@@ -52,8 +41,7 @@ await startConnector({
       description: "Run a raw SQL statement against the tenant's own database.",
       inputSchema: runQuerySchema,
       async handler({ sql: query, params }) {
-        const result = await safe(() => sql.unsafe(query, params as never[]));
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await sql.unsafe(query, params as never[]));
       },
     },
   ],

@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 import { getAccessToken } from "./google-auth.js";
 
@@ -32,15 +32,6 @@ function headerValue(headers: ReadonlyArray<{ name: string; value: string }>, na
   return headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value;
 }
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof GmailApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 async function handle<T>(res: Response): Promise<T> {
   const json = (await res.json()) as { error?: { message?: string } } & T;
   if (!res.ok) {
@@ -58,15 +49,13 @@ await startConnector({
       description: "List message IDs matching a Gmail search query.",
       inputSchema: listMessagesSchema,
       async handler({ query, maxResults }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const url = new URL(`${GMAIL_API}/messages`);
-          url.searchParams.set("maxResults", String(maxResults));
-          if (query) url.searchParams.set("q", query);
-          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-          return handle<{ messages?: Array<{ id: string; threadId: string }> }>(res);
-        });
-        return result.ok ? jsonResult(result.value.messages ?? []) : errorResult(result.message);
+        const token = await getAccessToken();
+        const url = new URL(`${GMAIL_API}/messages`);
+        url.searchParams.set("maxResults", String(maxResults));
+        if (query) url.searchParams.set("q", query);
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const { messages } = await handle<{ messages?: Array<{ id: string; threadId: string }> }>(res);
+        return jsonResult(messages ?? []);
       },
     },
     {
@@ -74,22 +63,19 @@ await startConnector({
       description: "Get a message's subject, sender, date, and plain-text body.",
       inputSchema: getMessageSchema,
       async handler({ messageId }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const url = new URL(`${GMAIL_API}/messages/${encodeURIComponent(messageId)}`);
-          url.searchParams.set("format", "full");
-          const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-          const message = await handle<{ snippet: string; payload: { headers: Array<{ name: string; value: string }> } & GmailPart }>(res);
-          const headers = message.payload.headers ?? [];
-          return {
-            subject: headerValue(headers, "Subject"),
-            from: headerValue(headers, "From"),
-            date: headerValue(headers, "Date"),
-            snippet: message.snippet,
-            body: extractPlainText(message.payload),
-          };
+        const token = await getAccessToken();
+        const url = new URL(`${GMAIL_API}/messages/${encodeURIComponent(messageId)}`);
+        url.searchParams.set("format", "full");
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const message = await handle<{ snippet: string; payload: { headers: Array<{ name: string; value: string }> } & GmailPart }>(res);
+        const headers = message.payload.headers ?? [];
+        return jsonResult({
+          subject: headerValue(headers, "Subject"),
+          from: headerValue(headers, "From"),
+          date: headerValue(headers, "Date"),
+          snippet: message.snippet,
+          body: extractPlainText(message.payload),
         });
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
       },
     },
     {
@@ -97,20 +83,18 @@ await startConnector({
       description: "Send an email from the authenticated account.",
       inputSchema: sendMessageSchema,
       async handler({ to, subject, body }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const raw = Buffer.from(
-            [`To: ${to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8", "", body].join("\r\n"),
-            "utf-8",
-          ).toString("base64url");
-          const res = await fetch(`${GMAIL_API}/messages/send`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ raw }),
-          });
-          return handle<{ id: string }>(res);
+        const token = await getAccessToken();
+        const raw = Buffer.from(
+          [`To: ${to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8", "", body].join("\r\n"),
+          "utf-8",
+        ).toString("base64url");
+        const res = await fetch(`${GMAIL_API}/messages/send`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ raw }),
         });
-        return result.ok ? textResult(`Message sent (id: ${result.value.id})`) : errorResult(result.message);
+        const { id } = await handle<{ id: string }>(res);
+        return textResult(`Message sent (id: ${id})`);
       },
     },
   ],

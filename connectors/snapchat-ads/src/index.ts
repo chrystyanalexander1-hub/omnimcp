@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 import { getAccessToken } from "./snapchat-auth.js";
 
@@ -20,15 +20,6 @@ const updateCampaignStatusSchema = z.object({
   campaignId: z.string(),
   status: z.enum(["ACTIVE", "PAUSED"]),
 });
-
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof SnapchatApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
 
 async function snapRequest<T>(path: string, body?: Record<string, unknown>, method: "GET" | "POST" | "PUT" = "GET"): Promise<T> {
   const token = await getAccessToken();
@@ -54,8 +45,8 @@ await startConnector({
       description: "List Snapchat Ads organizations accessible to the authenticated account.",
       inputSchema: listOrganizationsSchema,
       async handler() {
-        const result = await safe(() => snapRequest<{ organizations: unknown[] }>("me/organizations"));
-        return result.ok ? jsonResult(result.value.organizations) : errorResult(result.message);
+        const { organizations } = await snapRequest<{ organizations: unknown[] }>("me/organizations");
+        return jsonResult(organizations);
       },
     },
     {
@@ -63,8 +54,8 @@ await startConnector({
       description: "List ad accounts within an organization.",
       inputSchema: listAdAccountsSchema,
       async handler({ organizationId }) {
-        const result = await safe(() => snapRequest<{ adaccounts: unknown[] }>(`organizations/${organizationId}/adaccounts`));
-        return result.ok ? jsonResult(result.value.adaccounts) : errorResult(result.message);
+        const { adaccounts } = await snapRequest<{ adaccounts: unknown[] }>(`organizations/${organizationId}/adaccounts`);
+        return jsonResult(adaccounts);
       },
     },
     {
@@ -72,8 +63,8 @@ await startConnector({
       description: "List campaigns in an ad account.",
       inputSchema: listCampaignsSchema,
       async handler({ adAccountId }) {
-        const result = await safe(() => snapRequest<{ campaigns: unknown[] }>(`adaccounts/${adAccountId}/campaigns`));
-        return result.ok ? jsonResult(result.value.campaigns) : errorResult(result.message);
+        const { campaigns } = await snapRequest<{ campaigns: unknown[] }>(`adaccounts/${adAccountId}/campaigns`);
+        return jsonResult(campaigns);
       },
     },
     {
@@ -81,16 +72,12 @@ await startConnector({
       description: "Create a new advertising campaign.",
       inputSchema: createCampaignSchema,
       async handler({ adAccountId, name, status, startTime }) {
-        const result = await safe(() =>
-          snapRequest<{ campaigns: Array<{ campaign: { id: string } }> }>(
-            `adaccounts/${adAccountId}/campaigns`,
-            { campaigns: [{ name, ad_account_id: adAccountId, status, start_time: startTime ?? new Date().toISOString() }] },
-            "POST",
-          ),
+        const { campaigns } = await snapRequest<{ campaigns: Array<{ campaign: { id: string } }> }>(
+          `adaccounts/${adAccountId}/campaigns`,
+          { campaigns: [{ name, ad_account_id: adAccountId, status, start_time: startTime ?? new Date().toISOString() }] },
+          "POST",
         );
-        return result.ok
-          ? jsonResult({ campaignId: result.value.campaigns[0]?.campaign.id })
-          : errorResult(result.message);
+        return jsonResult({ campaignId: campaigns[0]?.campaign.id });
       },
     },
     {
@@ -98,10 +85,8 @@ await startConnector({
       description: "Pause or reactivate an existing campaign.",
       inputSchema: updateCampaignStatusSchema,
       async handler({ adAccountId, campaignId, status }) {
-        const result = await safe(() =>
-          snapRequest(`adaccounts/${adAccountId}/campaigns`, { campaigns: [{ id: campaignId, status }] }, "PUT"),
-        );
-        return result.ok ? textResult(`Campaign ${campaignId} status set to ${status}`) : errorResult(result.message);
+        await snapRequest(`adaccounts/${adAccountId}/campaigns`, { campaigns: [{ id: campaignId, status }] }, "PUT");
+        return textResult(`Campaign ${campaignId} status set to ${status}`);
       },
     },
   ],

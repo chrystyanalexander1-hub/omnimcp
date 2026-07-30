@@ -1,6 +1,6 @@
-import { errorResult, jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { TelegramApiError, sendVideo, telegramRequest } from "./telegram-client.js";
+import { sendVideo, telegramRequest } from "./telegram-client.js";
 
 const getMeSchema = z.object({});
 const getChatSchema = z.object({ chatId: z.string() });
@@ -13,15 +13,6 @@ const sendVideoSchema = z.object({
   caption: z.string().optional(),
 });
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof TelegramApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 await startConnector({
   name: "telegram",
   version: "0.1.0",
@@ -31,8 +22,7 @@ await startConnector({
       description: "Get basic information about the bot itself.",
       inputSchema: getMeSchema,
       async handler() {
-        const result = await safe(() => telegramRequest("getMe"));
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await telegramRequest("getMe"));
       },
     },
     {
@@ -40,8 +30,7 @@ await startConnector({
       description: "Get information about a chat by its ID or @username.",
       inputSchema: getChatSchema,
       async handler({ chatId }) {
-        const result = await safe(() => telegramRequest("getChat", { chat_id: chatId }));
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await telegramRequest("getChat", { chat_id: chatId }));
       },
     },
     {
@@ -49,10 +38,7 @@ await startConnector({
       description: "Fetch recent messages/events sent to the bot.",
       inputSchema: getUpdatesSchema,
       async handler({ limit, offset }) {
-        const result = await safe(() =>
-          telegramRequest("getUpdates", { limit, ...(offset !== undefined ? { offset } : {}) }),
-        );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await telegramRequest("getUpdates", { limit, ...(offset !== undefined ? { offset } : {}) }));
       },
     },
     {
@@ -60,10 +46,8 @@ await startConnector({
       description: "Send a text message to a chat, group, or channel.",
       inputSchema: sendMessageSchema,
       async handler({ chatId, text }) {
-        const result = await safe(() =>
-          telegramRequest<{ message_id: number }>("sendMessage", { chat_id: chatId, text }),
-        );
-        return result.ok ? jsonResult({ messageId: result.value.message_id }) : errorResult(result.message);
+        const { message_id } = await telegramRequest<{ message_id: number }>("sendMessage", { chat_id: chatId, text });
+        return jsonResult({ messageId: message_id });
       },
     },
     {
@@ -71,10 +55,12 @@ await startConnector({
       description: "Send a video to a chat, group, or channel.",
       inputSchema: sendVideoSchema,
       async handler({ chatId, videoUrl, contentBase64, caption }) {
-        const result = await safe(() =>
-          sendVideo(chatId, { ...(videoUrl ? { videoUrl } : {}), ...(contentBase64 ? { contentBase64 } : {}), ...(caption ? { caption } : {}) }),
-        );
-        return result.ok ? jsonResult({ messageId: result.value.message_id }) : errorResult(result.message);
+        const { message_id } = await sendVideo(chatId, {
+          ...(videoUrl ? { videoUrl } : {}),
+          ...(contentBase64 ? { contentBase64 } : {}),
+          ...(caption ? { caption } : {}),
+        });
+        return jsonResult({ messageId: message_id });
       },
     },
   ],

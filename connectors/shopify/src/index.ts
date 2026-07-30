@@ -1,6 +1,6 @@
-import { errorResult, jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { ShopifyApiError, shopifyRequest } from "./shopify-client.js";
+import { shopifyRequest } from "./shopify-client.js";
 
 const listProductsSchema = z.object({ shopDomain: z.string(), limit: z.number().default(20) });
 const getOrderSchema = z.object({ shopDomain: z.string(), orderId: z.string() });
@@ -18,15 +18,6 @@ const fulfillOrderSchema = z.object({
   notifyCustomer: z.boolean().default(true),
 });
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof ShopifyApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 await startConnector({
   name: "shopify",
   version: "0.1.0",
@@ -36,10 +27,8 @@ await startConnector({
       description: "List products in a Shopify store.",
       inputSchema: listProductsSchema,
       async handler({ shopDomain, limit }) {
-        const result = await safe(() =>
-          shopifyRequest<{ products: unknown[] }>(shopDomain, `/products.json?limit=${limit}`),
-        );
-        return result.ok ? jsonResult(result.value.products) : errorResult(result.message);
+        const { products } = await shopifyRequest<{ products: unknown[] }>(shopDomain, `/products.json?limit=${limit}`);
+        return jsonResult(products);
       },
     },
     {
@@ -47,8 +36,8 @@ await startConnector({
       description: "Get details of a specific order.",
       inputSchema: getOrderSchema,
       async handler({ shopDomain, orderId }) {
-        const result = await safe(() => shopifyRequest<{ order: unknown }>(shopDomain, `/orders/${orderId}.json`));
-        return result.ok ? jsonResult(result.value.order) : errorResult(result.message);
+        const { order } = await shopifyRequest<{ order: unknown }>(shopDomain, `/orders/${orderId}.json`);
+        return jsonResult(order);
       },
     },
     {
@@ -56,22 +45,20 @@ await startConnector({
       description: "Create a new product.",
       inputSchema: createProductSchema,
       async handler({ shopDomain, title, bodyHtml, price, status }) {
-        const result = await safe(() =>
-          shopifyRequest<{ product: { id: number } }>(
-            shopDomain,
-            "/products.json",
-            {
-              product: {
-                title,
-                status,
-                ...(bodyHtml ? { body_html: bodyHtml } : {}),
-                ...(price ? { variants: [{ price }] } : {}),
-              },
+        const { product } = await shopifyRequest<{ product: { id: number } }>(
+          shopDomain,
+          "/products.json",
+          {
+            product: {
+              title,
+              status,
+              ...(bodyHtml ? { body_html: bodyHtml } : {}),
+              ...(price ? { variants: [{ price }] } : {}),
             },
-            "POST",
-          ),
+          },
+          "POST",
         );
-        return result.ok ? jsonResult({ productId: result.value.product.id }) : errorResult(result.message);
+        return jsonResult({ productId: product.id });
       },
     },
     {
@@ -79,20 +66,18 @@ await startConnector({
       description: "Mark an order as fulfilled/shipped.",
       inputSchema: fulfillOrderSchema,
       async handler({ shopDomain, orderId, trackingNumber, notifyCustomer }) {
-        const result = await safe(() =>
-          shopifyRequest(
-            shopDomain,
-            `/orders/${orderId}/fulfillments.json`,
-            {
-              fulfillment: {
-                notify_customer: notifyCustomer,
-                ...(trackingNumber ? { tracking_number: trackingNumber } : {}),
-              },
+        await shopifyRequest(
+          shopDomain,
+          `/orders/${orderId}/fulfillments.json`,
+          {
+            fulfillment: {
+              notify_customer: notifyCustomer,
+              ...(trackingNumber ? { tracking_number: trackingNumber } : {}),
             },
-            "POST",
-          ),
+          },
+          "POST",
         );
-        return result.ok ? textResult(`Order ${orderId} fulfilled`) : errorResult(result.message);
+        return textResult(`Order ${orderId} fulfilled`);
       },
     },
   ],

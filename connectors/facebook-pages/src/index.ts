@@ -1,21 +1,12 @@
-import { errorResult, jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { FacebookApiError, graphRequest } from "./graph-client.js";
+import { graphRequest } from "./graph-client.js";
 
 const listPagesSchema = z.object({});
 const getPageInsightsSchema = z.object({ pageId: z.string(), metric: z.string().default("page_impressions") });
 const createPostSchema = z.object({ pageId: z.string(), message: z.string() });
 const uploadVideoSchema = z.object({ pageId: z.string(), videoUrl: z.string(), description: z.string().optional() });
 const uploadPhotoSchema = z.object({ pageId: z.string(), imageUrl: z.string(), caption: z.string().optional() });
-
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof FacebookApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
 
 await startConnector({
   name: "facebook-pages",
@@ -26,8 +17,8 @@ await startConnector({
       description: "List Facebook Pages the authenticated token can manage.",
       inputSchema: listPagesSchema,
       async handler() {
-        const result = await safe(() => graphRequest<{ data: unknown[] }>("me/accounts"));
-        return result.ok ? jsonResult(result.value.data) : errorResult(result.message);
+        const { data } = await graphRequest<{ data: unknown[] }>("me/accounts");
+        return jsonResult(data);
       },
     },
     {
@@ -35,8 +26,8 @@ await startConnector({
       description: "Get performance metrics for a Page.",
       inputSchema: getPageInsightsSchema,
       async handler({ pageId, metric }) {
-        const result = await safe(() => graphRequest<{ data: unknown[] }>(`${pageId}/insights`, { metric }));
-        return result.ok ? jsonResult(result.value.data) : errorResult(result.message);
+        const { data } = await graphRequest<{ data: unknown[] }>(`${pageId}/insights`, { metric });
+        return jsonResult(data);
       },
     },
     {
@@ -44,8 +35,8 @@ await startConnector({
       description: "Publish a text post to a Page's feed.",
       inputSchema: createPostSchema,
       async handler({ pageId, message }) {
-        const result = await safe(() => graphRequest<{ id: string }>(`${pageId}/feed`, { message }, "POST"));
-        return result.ok ? jsonResult({ postId: result.value.id }) : errorResult(result.message);
+        const { id } = await graphRequest<{ id: string }>(`${pageId}/feed`, { message }, "POST");
+        return jsonResult({ postId: id });
       },
     },
     {
@@ -53,14 +44,12 @@ await startConnector({
       description: "Upload and publish a video to a Page, fetched from a public URL.",
       inputSchema: uploadVideoSchema,
       async handler({ pageId, videoUrl, description }) {
-        const result = await safe(() =>
-          graphRequest<{ id: string }>(
-            `${pageId}/videos`,
-            { file_url: videoUrl, ...(description ? { description } : {}) },
-            "POST",
-          ),
+        const { id } = await graphRequest<{ id: string }>(
+          `${pageId}/videos`,
+          { file_url: videoUrl, ...(description ? { description } : {}) },
+          "POST",
         );
-        return result.ok ? jsonResult({ videoId: result.value.id }) : errorResult(result.message);
+        return jsonResult({ videoId: id });
       },
     },
     {
@@ -68,16 +57,12 @@ await startConnector({
       description: "Upload and publish a photo to a Page's feed, fetched from a public URL.",
       inputSchema: uploadPhotoSchema,
       async handler({ pageId, imageUrl, caption }) {
-        const result = await safe(() =>
-          graphRequest<{ id: string; post_id?: string }>(
-            `${pageId}/photos`,
-            { url: imageUrl, ...(caption ? { caption } : {}) },
-            "POST",
-          ),
+        const { id, post_id } = await graphRequest<{ id: string; post_id?: string }>(
+          `${pageId}/photos`,
+          { url: imageUrl, ...(caption ? { caption } : {}) },
+          "POST",
         );
-        return result.ok
-          ? jsonResult({ photoId: result.value.id, postId: result.value.post_id })
-          : errorResult(result.message);
+        return jsonResult({ photoId: id, postId: post_id });
       },
     },
   ],

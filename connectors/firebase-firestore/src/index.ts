@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 import { documentToPlainObject, toFirestoreValue } from "./firestore-values.js";
 import { getAccessToken } from "./google-auth.js";
@@ -15,15 +15,6 @@ const createDocumentSchema = z.object({
   fields: z.record(z.unknown()),
 });
 const deleteDocumentSchema = z.object({ projectId: z.string(), documentPath: z.string() });
-
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof FirestoreApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
 
 async function handle<T>(res: Response): Promise<T> {
   const json = (await res.json()) as { error?: { message?: string } } & T;
@@ -46,16 +37,12 @@ await startConnector({
       description: "List documents in a Firestore collection.",
       inputSchema: listDocumentsSchema,
       async handler({ projectId, collectionPath }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const res = await fetch(documentsUrl(projectId, collectionPath), {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return handle<{ documents?: Array<{ name?: string; fields?: Record<string, Record<string, unknown>> }> }>(res);
+        const token = await getAccessToken();
+        const res = await fetch(documentsUrl(projectId, collectionPath), {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        return result.ok
-          ? jsonResult((result.value.documents ?? []).map(documentToPlainObject))
-          : errorResult(result.message);
+        const { documents } = await handle<{ documents?: Array<{ name?: string; fields?: Record<string, Record<string, unknown>> }> }>(res);
+        return jsonResult((documents ?? []).map(documentToPlainObject));
       },
     },
     {
@@ -63,14 +50,12 @@ await startConnector({
       description: "Get a single document by its full path.",
       inputSchema: getDocumentSchema,
       async handler({ projectId, documentPath }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const res = await fetch(documentsUrl(projectId, documentPath), {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return handle<{ name?: string; fields?: Record<string, Record<string, unknown>> }>(res);
+        const token = await getAccessToken();
+        const res = await fetch(documentsUrl(projectId, documentPath), {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        return result.ok ? jsonResult(documentToPlainObject(result.value)) : errorResult(result.message);
+        const document = await handle<{ name?: string; fields?: Record<string, Record<string, unknown>> }>(res);
+        return jsonResult(documentToPlainObject(document));
       },
     },
     {
@@ -78,17 +63,15 @@ await startConnector({
       description: "Create a new document in a collection.",
       inputSchema: createDocumentSchema,
       async handler({ projectId, collectionPath, fields }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const firestoreFields = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, toFirestoreValue(v)]));
-          const res = await fetch(documentsUrl(projectId, collectionPath), {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ fields: firestoreFields }),
-          });
-          return handle<{ name?: string; fields?: Record<string, Record<string, unknown>> }>(res);
+        const token = await getAccessToken();
+        const firestoreFields = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, toFirestoreValue(v)]));
+        const res = await fetch(documentsUrl(projectId, collectionPath), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: firestoreFields }),
         });
-        return result.ok ? jsonResult(documentToPlainObject(result.value)) : errorResult(result.message);
+        const document = await handle<{ name?: string; fields?: Record<string, Record<string, unknown>> }>(res);
+        return jsonResult(documentToPlainObject(document));
       },
     },
     {
@@ -96,15 +79,13 @@ await startConnector({
       description: "Permanently delete a document.",
       inputSchema: deleteDocumentSchema,
       async handler({ projectId, documentPath }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const res = await fetch(documentsUrl(projectId, documentPath), {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) throw new FirestoreApiError(`Firestore API error: HTTP ${res.status}`);
+        const token = await getAccessToken();
+        const res = await fetch(documentsUrl(projectId, documentPath), {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
         });
-        return result.ok ? textResult(`Deleted ${documentPath}`) : errorResult(result.message);
+        if (!res.ok) throw new FirestoreApiError(`Firestore API error: HTTP ${res.status}`);
+        return textResult(`Deleted ${documentPath}`);
       },
     },
   ],

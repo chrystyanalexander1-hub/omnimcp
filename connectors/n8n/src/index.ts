@@ -1,19 +1,10 @@
-import { errorResult, jsonResult, requireEnv, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, requireEnv, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 
 export class N8nError extends Error {}
 
 const listWorkflowsSchema = z.object({ baseUrl: z.string() });
 const triggerWebhookSchema = z.object({ webhookUrl: z.string(), payload: z.record(z.unknown()) });
-
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof N8nError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
 
 await startConnector({
   name: "n8n",
@@ -32,15 +23,13 @@ await startConnector({
       description: "List workflows on a self-hosted n8n instance.",
       inputSchema: listWorkflowsSchema,
       async handler({ baseUrl }) {
-        const result = await safe(async () => {
-          const apiKey = requireEnv("N8N_API_KEY");
-          const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/workflows`, {
-            headers: { "X-N8N-API-KEY": apiKey },
-          });
-          if (!res.ok) throw new N8nError(`n8n API error: HTTP ${res.status} ${await res.text()}`);
-          return (await res.json()) as { data: unknown[] };
+        const apiKey = requireEnv("N8N_API_KEY");
+        const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/workflows`, {
+          headers: { "X-N8N-API-KEY": apiKey },
         });
-        return result.ok ? jsonResult(result.value.data) : errorResult(result.message);
+        if (!res.ok) throw new N8nError(`n8n API error: HTTP ${res.status} ${await res.text()}`);
+        const { data } = (await res.json()) as { data: unknown[] };
+        return jsonResult(data);
       },
     },
     {
@@ -48,15 +37,13 @@ await startConnector({
       description: "Trigger an n8n workflow by POSTing a JSON payload to its Webhook node URL.",
       inputSchema: triggerWebhookSchema,
       async handler({ webhookUrl, payload }) {
-        const result = await safe(async () => {
-          const res = await fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (!res.ok) throw new N8nError(`n8n webhook error: HTTP ${res.status} ${await res.text()}`);
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
-        return result.ok ? textResult("Workflow triggered") : errorResult(result.message);
+        if (!res.ok) throw new N8nError(`n8n webhook error: HTTP ${res.status} ${await res.text()}`);
+        return textResult("Workflow triggered");
       },
     },
   ],

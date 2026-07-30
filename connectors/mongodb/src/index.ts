@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
 import { MongoClient } from "mongodb";
 import { z } from "zod";
 
@@ -16,14 +16,6 @@ const runCommandSchema = z.object({ database: z.string(), command: z.record(z.un
 // ConnectorProcessManager's per-tenant-per-connector pooling), so keeping it open is safe.
 const client = new MongoClient(requireEnv("MONGODB_CONNECTION_STRING"));
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    return { ok: false as const, message: err instanceof Error ? err.message : String(err) };
-  }
-}
-
 await startConnector({
   name: "mongodb",
   version: "0.1.0",
@@ -33,11 +25,8 @@ await startConnector({
       description: "List collections in a database.",
       inputSchema: listCollectionsSchema,
       async handler({ database }) {
-        const result = await safe(async () => {
-          const collections = await client.db(database).listCollections().toArray();
-          return collections.map((c) => c.name);
-        });
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        const collections = await client.db(database).listCollections().toArray();
+        return jsonResult(collections.map((c) => c.name));
       },
     },
     {
@@ -45,8 +34,7 @@ await startConnector({
       description: "Find documents in a collection matching an optional filter.",
       inputSchema: findDocumentsSchema,
       async handler({ database, collection, filter, limit }) {
-        const result = await safe(() => client.db(database).collection(collection).find(filter).limit(limit).toArray());
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await client.db(database).collection(collection).find(filter).limit(limit).toArray());
       },
     },
     {
@@ -54,8 +42,7 @@ await startConnector({
       description: "Run a raw MongoDB database command against the tenant's own database.",
       inputSchema: runCommandSchema,
       async handler({ database, command }) {
-        const result = await safe(() => client.db(database).command(command));
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await client.db(database).command(command));
       },
     },
   ],

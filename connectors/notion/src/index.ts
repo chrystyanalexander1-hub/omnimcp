@@ -1,6 +1,6 @@
-import { errorResult, jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { NotionApiError, notionRequest } from "./notion-client.js";
+import { notionRequest } from "./notion-client.js";
 
 const searchSchema = z.object({ query: z.string().optional() });
 const getPageSchema = z.object({ pageId: z.string() });
@@ -17,15 +17,6 @@ function titlePropertyKey(parentType: "page_id" | "database_id"): string {
   return parentType === "database_id" ? "Name" : "title";
 }
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof NotionApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 await startConnector({
   name: "notion",
   version: "0.1.0",
@@ -35,10 +26,8 @@ await startConnector({
       description: "Search pages and databases the integration has access to.",
       inputSchema: searchSchema,
       async handler({ query }) {
-        const result = await safe(() =>
-          notionRequest<{ results: unknown[] }>("/search", { ...(query ? { query } : {}) }, "POST"),
-        );
-        return result.ok ? jsonResult(result.value.results) : errorResult(result.message);
+        const { results } = await notionRequest<{ results: unknown[] }>("/search", { ...(query ? { query } : {}) }, "POST");
+        return jsonResult(results);
       },
     },
     {
@@ -46,8 +35,7 @@ await startConnector({
       description: "Get a page's properties by ID.",
       inputSchema: getPageSchema,
       async handler({ pageId }) {
-        const result = await safe(() => notionRequest(`/pages/${pageId}`));
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await notionRequest(`/pages/${pageId}`));
       },
     },
     {
@@ -55,20 +43,18 @@ await startConnector({
       description: "Create a new page under a parent page or database.",
       inputSchema: createPageSchema,
       async handler({ parentId, parentType, title, content }) {
-        const result = await safe(() =>
-          notionRequest<{ id: string; url: string }>(
-            "/pages",
-            {
-              parent: { [parentType]: parentId },
-              properties: { [titlePropertyKey(parentType)]: { title: [{ text: { content: title } }] } },
-              ...(content
-                ? { children: [{ object: "block", type: "paragraph", paragraph: { rich_text: [{ text: { content } }] } }] }
-                : {}),
-            },
-            "POST",
-          ),
+        const { id, url } = await notionRequest<{ id: string; url: string }>(
+          "/pages",
+          {
+            parent: { [parentType]: parentId },
+            properties: { [titlePropertyKey(parentType)]: { title: [{ text: { content: title } }] } },
+            ...(content
+              ? { children: [{ object: "block", type: "paragraph", paragraph: { rich_text: [{ text: { content } }] } }] }
+              : {}),
+          },
+          "POST",
         );
-        return result.ok ? jsonResult({ pageId: result.value.id, url: result.value.url }) : errorResult(result.message);
+        return jsonResult({ pageId: id, url });
       },
     },
     {
@@ -76,10 +62,9 @@ await startConnector({
       description: "Update a page's title property.",
       inputSchema: updatePageSchema,
       async handler({ pageId, title }) {
-        const result = await safe(() =>
-          notionRequest(`/pages/${pageId}`, { properties: { title: { title: [{ text: { content: title } }] } } }, "PATCH"),
+        return jsonResult(
+          await notionRequest(`/pages/${pageId}`, { properties: { title: { title: [{ text: { content: title } }] } } }, "PATCH"),
         );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
       },
     },
   ],

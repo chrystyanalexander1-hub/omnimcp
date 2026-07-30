@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector, textResult } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 import { getAccessToken } from "./google-auth.js";
 
@@ -22,15 +22,6 @@ const uploadVideoSchema = z.object({
   privacyStatus: z.enum(["public", "unlisted", "private"]).default("private"),
 });
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof YouTubeApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 async function handle<T>(res: Response): Promise<T> {
   const json = (await res.json()) as { error?: { message?: string } } & T;
   if (!res.ok) {
@@ -48,15 +39,13 @@ await startConnector({
       description: "List videos uploaded by the authenticated channel.",
       inputSchema: listMyVideosSchema,
       async handler({ maxResults }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const res = await fetch(
-            `${YOUTUBE_API}/search?part=id,snippet&forMine=true&type=video&maxResults=${maxResults}`,
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-          return handle<{ items: unknown[] }>(res);
-        });
-        return result.ok ? jsonResult(result.value.items) : errorResult(result.message);
+        const token = await getAccessToken();
+        const res = await fetch(
+          `${YOUTUBE_API}/search?part=id,snippet&forMine=true&type=video&maxResults=${maxResults}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const { items } = await handle<{ items: unknown[] }>(res);
+        return jsonResult(items);
       },
     },
     {
@@ -64,14 +53,12 @@ await startConnector({
       description: "Get view/like/comment counts and snippet metadata for a video.",
       inputSchema: getVideoStatsSchema,
       async handler({ videoId }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const res = await fetch(`${YOUTUBE_API}/videos?part=statistics,snippet&id=${videoId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return handle<{ items: unknown[] }>(res);
+        const token = await getAccessToken();
+        const res = await fetch(`${YOUTUBE_API}/videos?part=statistics,snippet&id=${videoId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        return result.ok ? jsonResult(result.value.items[0] ?? null) : errorResult(result.message);
+        const { items } = await handle<{ items: unknown[] }>(res);
+        return jsonResult(items[0] ?? null);
       },
     },
     {
@@ -79,27 +66,24 @@ await startConnector({
       description: "Update a video's public title/description.",
       inputSchema: updateVideoMetadataSchema,
       async handler({ videoId, title, description }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const current = await handle<{ items: Array<{ snippet: Record<string, unknown> }> }>(
-            await fetch(`${YOUTUBE_API}/videos?part=snippet&id=${videoId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-          );
-          const snippet = current.items[0]?.snippet;
-          if (!snippet) throw new YouTubeApiError(`Video ${videoId} not found`);
+        const token = await getAccessToken();
+        const current = await handle<{ items: Array<{ snippet: Record<string, unknown> }> }>(
+          await fetch(`${YOUTUBE_API}/videos?part=snippet&id=${videoId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        );
+        const snippet = current.items[0]?.snippet;
+        if (!snippet) throw new YouTubeApiError(`Video ${videoId} not found`);
 
-          const res = await fetch(`${YOUTUBE_API}/videos?part=snippet`, {
-            method: "PUT",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: videoId,
-              snippet: { ...snippet, ...(title ? { title } : {}), ...(description ? { description } : {}) },
-            }),
-          });
-          return handle(res);
+        const res = await fetch(`${YOUTUBE_API}/videos?part=snippet`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: videoId,
+            snippet: { ...snippet, ...(title ? { title } : {}), ...(description ? { description } : {}) },
+          }),
         });
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await handle(res));
       },
     },
     {
@@ -107,26 +91,24 @@ await startConnector({
       description: "Upload and publish a new video.",
       inputSchema: uploadVideoSchema,
       async handler({ title, description, contentBase64, mimeType, privacyStatus }) {
-        const result = await safe(async () => {
-          const token = await getAccessToken();
-          const boundary = `omnimcp-${crypto.randomUUID()}`;
-          const metadata = JSON.stringify({ snippet: { title, description }, status: { privacyStatus } });
-          const body =
-            `--${boundary}\r\n` +
-            `Content-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
-            `--${boundary}\r\n` +
-            `Content-Type: ${mimeType}\r\n` +
-            `Content-Transfer-Encoding: base64\r\n\r\n${contentBase64}\r\n` +
-            `--${boundary}--`;
+        const token = await getAccessToken();
+        const boundary = `omnimcp-${crypto.randomUUID()}`;
+        const metadata = JSON.stringify({ snippet: { title, description }, status: { privacyStatus } });
+        const body =
+          `--${boundary}\r\n` +
+          `Content-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n` +
+          `--${boundary}\r\n` +
+          `Content-Type: ${mimeType}\r\n` +
+          `Content-Transfer-Encoding: base64\r\n\r\n${contentBase64}\r\n` +
+          `--${boundary}--`;
 
-          const res = await fetch(`${YOUTUBE_UPLOAD_API}/videos?uploadType=multipart&part=snippet,status`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
-            body,
-          });
-          return handle<{ id: string }>(res);
+        const res = await fetch(`${YOUTUBE_UPLOAD_API}/videos?uploadType=multipart&part=snippet,status`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": `multipart/related; boundary=${boundary}` },
+          body,
         });
-        return result.ok ? textResult(`Uploaded video ${result.value.id}`) : errorResult(result.message);
+        const { id } = await handle<{ id: string }>(res);
+        return textResult(`Uploaded video ${id}`);
       },
     },
   ],

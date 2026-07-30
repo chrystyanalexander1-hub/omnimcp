@@ -1,6 +1,6 @@
-import { errorResult, jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
-import { RedditApiError, redditGet, redditPostForm } from "./reddit-client.js";
+import { redditGet, redditPostForm } from "./reddit-client.js";
 
 const listSubredditPostsSchema = z.object({
   subreddit: z.string(),
@@ -15,15 +15,6 @@ const submitPostSchema = z.object({
 });
 const submitCommentSchema = z.object({ parentFullname: z.string(), text: z.string() });
 
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof RedditApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
-
 await startConnector({
   name: "reddit",
   version: "0.1.0",
@@ -33,10 +24,8 @@ await startConnector({
       description: "List posts from a subreddit.",
       inputSchema: listSubredditPostsSchema,
       async handler({ subreddit, sort, limit }) {
-        const result = await safe(() =>
-          redditGet<{ data: { children: Array<{ data: unknown }> } }>(`/r/${subreddit}/${sort}`, { limit }),
-        );
-        return result.ok ? jsonResult(result.value.data.children.map((c) => c.data)) : errorResult(result.message);
+        const { data } = await redditGet<{ data: { children: Array<{ data: unknown }> } }>(`/r/${subreddit}/${sort}`, { limit });
+        return jsonResult(data.children.map((c) => c.data));
       },
     },
     {
@@ -44,8 +33,8 @@ await startConnector({
       description: "Submit a new post to a subreddit — text post if `text` is given, link post if `url` is given.",
       inputSchema: submitPostSchema,
       async handler({ subreddit, title, text, url }) {
-        const result = await safe(() =>
-          redditPostForm<{ id?: string; name?: string; url?: string }>("/api/submit", {
+        return jsonResult(
+          await redditPostForm<{ id?: string; name?: string; url?: string }>("/api/submit", {
             sr: subreddit,
             title,
             kind: url ? "link" : "self",
@@ -53,7 +42,6 @@ await startConnector({
             ...(url ? { url } : {}),
           }),
         );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
       },
     },
     {
@@ -61,10 +49,7 @@ await startConnector({
       description: "Reply to a post or comment.",
       inputSchema: submitCommentSchema,
       async handler({ parentFullname, text }) {
-        const result = await safe(() =>
-          redditPostForm<{ things?: unknown[] }>("/api/comment", { thing_id: parentFullname, text }),
-        );
-        return result.ok ? jsonResult(result.value) : errorResult(result.message);
+        return jsonResult(await redditPostForm<{ things?: unknown[] }>("/api/comment", { thing_id: parentFullname, text }));
       },
     },
   ],

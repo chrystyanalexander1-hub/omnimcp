@@ -1,4 +1,4 @@
-import { errorResult, jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
+import { jsonResult, requireEnv, startConnector } from "@omnimcp/connector-sdk-ts";
 import { z } from "zod";
 
 const OPENAI_API = "https://api.openai.com/v1";
@@ -15,15 +15,6 @@ const generateImageSchema = z.object({
   size: z.enum(["1024x1024", "1024x1792", "1792x1024"]).default("1024x1024"),
   n: z.number().default(1),
 });
-
-async function safe<T>(fn: () => Promise<T>) {
-  try {
-    return { ok: true as const, value: await fn() };
-  } catch (err) {
-    const message = err instanceof OpenAiApiError || err instanceof Error ? err.message : String(err);
-    return { ok: false as const, message };
-  }
-}
 
 async function openaiRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const apiKey = requireEnv("OPENAI_API_KEY");
@@ -48,14 +39,12 @@ await startConnector({
       description: "Get a chat completion from an OpenAI model.",
       inputSchema: chatCompletionSchema,
       async handler({ model, messages, maxTokens }) {
-        const result = await safe(() =>
-          openaiRequest<{ choices: Array<{ message: { content: string } }> }>("/chat/completions", {
-            model,
-            messages,
-            ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
-          }),
-        );
-        return result.ok ? jsonResult({ content: result.value.choices[0]?.message.content }) : errorResult(result.message);
+        const { choices } = await openaiRequest<{ choices: Array<{ message: { content: string } }> }>("/chat/completions", {
+          model,
+          messages,
+          ...(maxTokens !== undefined ? { max_tokens: maxTokens } : {}),
+        });
+        return jsonResult({ content: choices[0]?.message.content });
       },
     },
     {
@@ -63,15 +52,13 @@ await startConnector({
       description: "Generate an image from a text prompt.",
       inputSchema: generateImageSchema,
       async handler({ prompt, size, n }) {
-        const result = await safe(() =>
-          openaiRequest<{ data: Array<{ url?: string }> }>("/images/generations", {
-            model: "dall-e-3",
-            prompt,
-            size,
-            n,
-          }),
-        );
-        return result.ok ? jsonResult(result.value.data.map((d) => d.url)) : errorResult(result.message);
+        const { data } = await openaiRequest<{ data: Array<{ url?: string }> }>("/images/generations", {
+          model: "dall-e-3",
+          prompt,
+          size,
+          n,
+        });
+        return jsonResult(data.map((d) => d.url));
       },
     },
   ],
