@@ -8,9 +8,21 @@ vi.mock("@omnimcp/connector-sdk-ts", async () => {
   return {
     ...actual,
     // Captures the tool definitions instead of actually booting an MCP stdio server,
-    // so handlers can be invoked directly against a mocked fetch.
+    // wrapping each handler the same way the real startConnector does so a thrown
+    // error surfaces as an errorResult here too instead of failing the test.
     startConnector: vi.fn(async (definition: { tools: ReadonlyArray<ToolDefinition<any>> }) => {
-      for (const tool of definition.tools) tools.set(tool.name, tool);
+      for (const tool of definition.tools) {
+        tools.set(tool.name, {
+          ...tool,
+          async handler(input: any) {
+            try {
+              return await tool.handler(input);
+            } catch (err) {
+              return actual.errorResult(err instanceof Error ? err.message : String(err));
+            }
+          },
+        });
+      }
     }),
   };
 });
