@@ -312,3 +312,57 @@ describe("upload_media", () => {
     expect(result.isError).toBe(true);
   });
 });
+
+describe("get_business_profile", () => {
+  const tool = () => tools.get("get_business_profile")!;
+
+  it("fetches the profile fields for a phone number", async () => {
+    mockFetchResponses({ body: { about: "We sell shoes", email: "hello@example.com" } });
+
+    const result = await tool().handler({ phoneNumberId: "123" });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect((url as URL).pathname).toContain("/123/whatsapp_business_profile");
+    expect((url as URL).searchParams.get("fields")).toBe(
+      "about,address,description,email,profile_picture_url,websites,vertical",
+    );
+    expect(init.method).toBe("GET");
+
+    expect(jsonOf(result)).toEqual({ about: "We sell shoes", email: "hello@example.com" });
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Unsupported get request" } }, ok: false });
+
+    const result = await tool().handler({ phoneNumberId: "123" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Unsupported get request");
+  });
+});
+
+describe("list_message_templates", () => {
+  const tool = () => tools.get("list_message_templates")!;
+
+  it("lists the account's approved templates", async () => {
+    mockFetchResponses({ body: { data: [{ name: "order_confirmation" }, { name: "shipping_update" }] } });
+
+    const result = await tool().handler({ wabaId: "waba-1" });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url] = (fetch as any).mock.calls[0];
+    expect((url as URL).pathname).toContain("/waba-1/message_templates");
+
+    expect(jsonOf(result)).toEqual([{ name: "order_confirmation" }, { name: "shipping_update" }]);
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Invalid OAuth access token" } }, ok: false });
+
+    const result = await tool().handler({ wabaId: "waba-1" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Invalid OAuth access token");
+  });
+});
