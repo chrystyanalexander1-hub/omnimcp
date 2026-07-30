@@ -23,10 +23,10 @@ function jsonOf(result: { content: Array<{ type: "text"; text: string }> }): unk
   return JSON.parse(textOf(result));
 }
 
-function mockFetchResponses(...responses: Array<{ body: unknown; ok?: boolean }>) {
+function mockFetchResponses(...responses: Array<{ body: unknown; ok?: boolean; status?: number }>) {
   const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-  for (const { body, ok = true } of responses) {
-    fetchMock.mockResolvedValueOnce({ ok, json: async () => body });
+  for (const { body, ok = true, status = ok ? 200 : 400 } of responses) {
+    fetchMock.mockResolvedValueOnce({ ok, status, json: async () => body });
   }
 }
 
@@ -251,5 +251,64 @@ describe("send_image_message", () => {
 
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain("Invalid parameter");
+  });
+});
+
+describe("upload_media", () => {
+  const tool = () => tools.get("upload_media")!;
+
+  it("uploads bytes and returns the resulting media id", async () => {
+    mockFetchResponses({ body: { id: "media-upload-1" } });
+
+    const result = await tool().handler({
+      phoneNumberId: "123",
+      contentBase64: Buffer.from("fake bytes").toString("base64"),
+      mimeType: "image/png",
+      filename: "logo.png",
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(String(url)).toContain("/123/media");
+
+    const form = init.body as FormData;
+    expect(form.get("messaging_product")).toBe("whatsapp");
+    expect(form.get("type")).toBe("image/png");
+    const file = form.get("file") as File;
+    expect(file.name).toBe("logo.png");
+    expect(file.type).toBe("image/png");
+
+    expect(jsonOf(result)).toEqual({ mediaId: "media-upload-1" });
+  });
+
+  it('defaults the filename to "file" when none is given', async () => {
+    mockFetchResponses({ body: { id: "media-upload-2" } });
+
+    await tool().handler({
+      phoneNumberId: "123",
+      contentBase64: Buffer.from("fake bytes").toString("base64"),
+      mimeType: "audio/mpeg",
+    });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const file = (init.body as FormData).get("file") as File;
+    expect(file.name).toBe("file");
+  });
+
+  it("surfaces a WhatsApp API error as an error result", async () => {
+    mockFetchResponses({ body: { error: { message: "Invalid parameter" } }, ok: false });
+
+    const result = await tool().handler({ phoneNumberId: "123", contentBase64: "aGVsbG8=", mimeType: "image/png" });
+
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain("Invalid parameter");
+  });
+
+  it("returns an error result when the API responds ok but without a media id", async () => {
+    mockFetchResponses({ body: {} });
+
+    const result = await tool().handler({ phoneNumberId: "123", contentBase64: "aGVsbG8=", mimeType: "image/png" });
+
+    expect(result.isError).toBe(true);
   });
 });
